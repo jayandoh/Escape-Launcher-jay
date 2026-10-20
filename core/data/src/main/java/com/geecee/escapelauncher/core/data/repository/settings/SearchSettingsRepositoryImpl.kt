@@ -29,4 +29,8 @@ class SearchSettingsRepositoryImpl @Inject constructor(
     override suspend fun setShowHiddenAppsInSearch(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.SHOW_HIDDEN_APPS_IN_SEARCH] = enabled }
     }
+    override val swipeUpToSearch: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.SWIPE_UP_TO_SEARCH] ?: DefaultSettings.SWIPE_UP_TO_SEARCH }
+    override suspend fun setSwipeUpToSearch(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SWIPE_UP_TO_SEARCH] = enabled }
+    }
 }

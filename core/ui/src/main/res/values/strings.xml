@@ -104,6 +104,8 @@
     <string name="show_hidden_apps_in_search">Show hidden apps in search</string>
     <string name="manage_favourite_apps">Manage favourite apps</string>
     <string name="apps_list_auto_search">Automatically Open Search</string>
+    <string name="swipe_up_to_search">Swipe up to search</string>
+    <string name="type_to_search_apps">Type to search apps</string>
     <string name="sponsor">Sponsor</string>
     <string name="font_licences">Font Licences</string>
     <string name="show_weather">Show Weather</string>

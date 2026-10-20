@@ -55,6 +55,7 @@ object DefaultSettings {
     const val SHOW_SEARCH_BOX = true
     const val SEARCH_AUTO_OPEN = false
     const val AUTOMATICALLY_OPEN_APPS_IN_SEARCH = false
+    const val SWIPE_UP_TO_SEARCH = true
 
     // Misc
     const val DOUBLE_TAP_TO_LOCK = true

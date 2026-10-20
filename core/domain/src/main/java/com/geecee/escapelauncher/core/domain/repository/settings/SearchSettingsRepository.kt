@@ -11,4 +11,6 @@ interface SearchSettingsRepository {
     suspend fun setAutomaticallyOpenAppsInSearch(enabled: Boolean)
     val showHiddenAppsInSearch: Flow<Boolean>
     suspend fun setShowHiddenAppsInSearch(enabled: Boolean)
+    val swipeUpToSearch: Flow<Boolean>
+    suspend fun setSwipeUpToSearch(enabled: Boolean)
 }

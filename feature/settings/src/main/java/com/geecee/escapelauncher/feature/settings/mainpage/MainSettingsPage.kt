@@ -394,9 +394,19 @@ fun MainSettingsPage(
                 SettingsSwitch(
                     label = stringResource(id = R.string.apps_list_auto_search),
                     checked = uiState.searchAutoOpen,
-                    isBottomOfGroup = true,
+                    isBottomOfGroup = false,
                     onCheckedChange = {
                         mainSettingsPageViewModel.setSearchAutoOpen(it)
+                    })
+            }
+
+            item(key = "swipe_up_to_search") {
+                SettingsSwitch(
+                    label = stringResource(id = R.string.swipe_up_to_search),
+                    checked = uiState.swipeUpToSearch,
+                    isBottomOfGroup = true,
+                    onCheckedChange = {
+                        mainSettingsPageViewModel.setSwipeUpToSearch(it)
                     })
             }
 
