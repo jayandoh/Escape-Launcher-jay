@@ -1,5 +1,11 @@
 package com.geecee.escapelauncher.feature.appslist
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.ime
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -97,10 +103,38 @@ fun SearchOverlay(
         // keyboard starts to go down, so the search fades out while the keyboard slides away.
         val imeHeadingVisible = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current) > 0
         var imeWasVisible by remember { mutableStateOf(false) }
+
+        // SPIKE: dragging anywhere on the search moves the keyboard with the finger (Android 11+)
+        val listState = rememberLazyListState()
+        val dragging = listState.isScrollInProgress
+        val ime = WindowInsets.ime
+        val density = LocalDensity.current
+        var fullImeHeight by remember { mutableIntStateOf(0) }
+        val imeBottom = ime.getBottom(density)
+        LaunchedEffect(imeBottom) { if (imeBottom > fullImeHeight) fullImeHeight = imeBottom }
+        LaunchedEffect(imeBottom, imeHeadingVisible, dragging) {
+            Log.d("SpikeDrag", "ime=$imeBottom/$fullImeHeight headingVisible=$imeHeadingVisible dragging=$dragging")
+        }
+
+        // SPIKE: a drag lasts until the keyboard comes to rest after the finger lifts.
+        // While it lasts, where the keyboard is heading isn't reliable, so only its resting place counts.
+        var dragSession by remember { mutableStateOf(false) }
+        val currentDragSession by rememberUpdatedState(dragSession)
+        LaunchedEffect(dragging) { if (dragging) dragSession = true }
+        LaunchedEffect(dragSession, dragging, imeBottom) {
+            if (!dragSession || dragging) return@LaunchedEffect
+            if (imeBottom == 0) {
+                dragSession = false
+                if (!currentShowingResults) currentOnDismiss()
+            } else if (imeBottom >= fullImeHeight) {
+                dragSession = false
+            }
+        }
+
         LaunchedEffect(imeHeadingVisible) {
             if (imeHeadingVisible) {
                 imeWasVisible = true
-            } else if (imeWasVisible && !currentShowingResults) {
+            } else if (imeWasVisible && !currentDragSession && !currentShowingResults) {
                 currentOnDismiss()
             }
         }
@@ -108,6 +142,12 @@ fun SearchOverlay(
         Column(
             Modifier
                 .fillMaxSize()
+                // SPIKE: with nothing listed, the search fades with the keyboard while it's dragged
+                .graphicsLayer {
+                    alpha = if (dragSession && !showingResults && fullImeHeight > 0) {
+                        (ime.getBottom(this).toFloat() / fullImeHeight).coerceIn(0f, 1f)
+                    } else 1f
+                }
                 // Opaque, so the page underneath doesn't show through the results.
                 // With the wallpaper shown, let a little of it through like the rest of the launcher.
                 .background(MaterialTheme.colorScheme.background.copy(alpha = if (showWallpaper) 0.9f else 1f))
@@ -124,29 +164,20 @@ fun SearchOverlay(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                if (!showingResults) {
-                    Text(
-                        text = stringResource(
-                            if (searchText.isBlank()) R.string.type_to_search_apps else R.string.no_matching_apps
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        modifier = Modifier
-                            .align(fieldAlignment)
-                            .padding(start = 30.dp, end = 30.dp, bottom = 20.dp)
-                    )
-                } else {
-                    LazyColumn(
-                        reverseLayout = true,
-                        horizontalAlignment = alignment,
-                        contentPadding = PaddingValues(
-                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp,
-                            bottom = 10.dp
-                        ),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 30.dp)
-                    ) {
+                LazyColumn(
+                    state = listState,
+                    reverseLayout = true,
+                    horizontalAlignment = alignment,
+                    contentPadding = PaddingValues(
+                        top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp,
+                        bottom = 10.dp
+                    ),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .imeNestedScroll()
+                        .padding(horizontal = 30.dp)
+                ) {
+                    if (showingResults) {
                         itemsIndexed(results, key = { _, app -> app.packageName }) { index, app ->
                             val color = if (showWallpaper) MaterialTheme.colorScheme.primaryFixed else MaterialTheme.colorScheme.primary
                             HomeScreenItem(
@@ -160,6 +191,18 @@ fun SearchOverlay(
                             )
                         }
                     }
+                }
+                if (!showingResults) {
+                    Text(
+                        text = stringResource(
+                            if (searchText.isBlank()) R.string.type_to_search_apps else R.string.no_matching_apps
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .align(fieldAlignment)
+                            .padding(start = 30.dp, end = 30.dp, bottom = 20.dp)
+                    )
                 }
             }
 
