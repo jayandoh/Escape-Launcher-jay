@@ -1,6 +1,7 @@
 package com.geecee.escapelauncher.feature.appslist
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -10,7 +11,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -35,6 +36,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -65,10 +68,19 @@ fun SearchOverlay(
     alignment: Alignment.Horizontal = Alignment.Start,
     showWallpaper: Boolean = false
 ) {
+    // However the search closes, take the keyboard down with it at the same moment
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var wasVisible by remember { mutableStateOf(visible) }
+    LaunchedEffect(visible) {
+        if (wasVisible && !visible) keyboardController?.hide()
+        wasVisible = visible
+    }
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + slideInVertically { it / 10 },
-        exit = fadeOut(),
+        // Quick, so it finishes together with the keyboard sliding away
+        exit = fadeOut(tween(durationMillis = 150)),
         modifier = modifier
     ) {
         val fieldAlignment = when (alignment) {
@@ -81,11 +93,12 @@ fun SearchOverlay(
         val currentOnDismiss by rememberUpdatedState(onDismiss)
 
         // The keyboard takes the first back press itself. With nothing listed there is nothing
-        // to look at without it, so that press closes the search too.
-        val imeVisible = WindowInsets.isImeVisible
+        // to look at without it, so that press closes the search too. This reacts as soon as the
+        // keyboard starts to go down, so the search fades out while the keyboard slides away.
+        val imeHeadingVisible = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current) > 0
         var imeWasVisible by remember { mutableStateOf(false) }
-        LaunchedEffect(imeVisible) {
-            if (imeVisible) {
+        LaunchedEffect(imeHeadingVisible) {
+            if (imeHeadingVisible) {
                 imeWasVisible = true
             } else if (imeWasVisible && !currentShowingResults) {
                 currentOnDismiss()
