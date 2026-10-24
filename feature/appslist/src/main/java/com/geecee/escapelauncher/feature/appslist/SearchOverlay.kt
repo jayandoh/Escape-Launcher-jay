@@ -128,6 +128,9 @@ fun SearchOverlay(
         // While it lasts, where the keyboard is heading isn't reliable, so only its resting place counts.
         var dragSession by remember { mutableStateOf(false) }
         val currentDragSession by rememberUpdatedState(dragSession)
+        // Once a drag has faded the search out and it's closing, it stays invisible
+        var fadedOutByDrag by remember { mutableStateOf(false) }
+        LaunchedEffect(visible) { if (visible) fadedOutByDrag = false }
         LaunchedEffect(dragging) { if (dragging) dragSession = true }
         LaunchedEffect(openFailed) {
             // Android wouldn't let the finger move the keyboard, so open it the usual way
@@ -137,8 +140,11 @@ fun SearchOverlay(
             if (openFailed) dragSession = false
             if (!dragSession || dragging) return@LaunchedEffect
             if (imeBottom == 0) {
+                if (!currentShowingResults) {
+                    fadedOutByDrag = true
+                    currentOnDismiss()
+                }
                 dragSession = false
-                if (!currentShowingResults) currentOnDismiss()
             } else if (imeBottom >= fullImeHeight) {
                 dragSession = false
             }
@@ -159,6 +165,7 @@ fun SearchOverlay(
                 .graphicsLayer {
                     val shownHeight = openDrag?.shownHeight ?: 0
                     alpha = when {
+                        fadedOutByDrag -> 0f
                         openDrag?.active == true && !openDrag.failed ->
                             if (shownHeight > 0) (ime.getBottom(this).toFloat() / shownHeight).coerceIn(0f, 1f) else 0f
                         dragSession && !showingResults && fullImeHeight > 0 ->
