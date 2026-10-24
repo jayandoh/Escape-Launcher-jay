@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.ime
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -72,19 +73,24 @@ fun SearchOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     alignment: Alignment.Horizontal = Alignment.Start,
-    showWallpaper: Boolean = false
+    showWallpaper: Boolean = false,
+    openDrag: SearchOpenDrag? = null
 ) {
     // However the search closes, take the keyboard down with it at the same moment
     val keyboardController = LocalSoftwareKeyboardController.current
     var wasVisible by remember { mutableStateOf(visible) }
     LaunchedEffect(visible) {
-        if (wasVisible && !visible) keyboardController?.hide()
+        if (wasVisible && !visible) {
+            openDrag?.cancel()
+            keyboardController?.hide()
+        }
         wasVisible = visible
     }
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn() + slideInVertically { it / 10 },
+        // SPIKE: when opened by a swipe, the keyboard and fade follow the finger instead
+        enter = if (openDrag?.active == true) EnterTransition.None else fadeIn() + slideInVertically { it / 10 },
         // Quick, so it finishes together with the keyboard sliding away
         exit = fadeOut(tween(durationMillis = 150)),
         modifier = modifier
@@ -106,7 +112,9 @@ fun SearchOverlay(
 
         // SPIKE: dragging anywhere on the search moves the keyboard with the finger (Android 11+)
         val listState = rememberLazyListState()
-        val dragging = listState.isScrollInProgress
+        val openingByDrag = remember { openDrag?.active == true }
+        val openFailed = openDrag?.failed == true
+        val dragging = listState.isScrollInProgress || (openDrag?.active == true && !openFailed)
         val ime = WindowInsets.ime
         val density = LocalDensity.current
         var fullImeHeight by remember { mutableIntStateOf(0) }
@@ -121,7 +129,12 @@ fun SearchOverlay(
         var dragSession by remember { mutableStateOf(false) }
         val currentDragSession by rememberUpdatedState(dragSession)
         LaunchedEffect(dragging) { if (dragging) dragSession = true }
-        LaunchedEffect(dragSession, dragging, imeBottom) {
+        LaunchedEffect(openFailed) {
+            // Android wouldn't let the finger move the keyboard, so open it the usual way
+            if (openFailed) keyboardController?.show()
+        }
+        LaunchedEffect(dragSession, dragging, imeBottom, openFailed) {
+            if (openFailed) dragSession = false
             if (!dragSession || dragging) return@LaunchedEffect
             if (imeBottom == 0) {
                 dragSession = false
@@ -144,9 +157,14 @@ fun SearchOverlay(
                 .fillMaxSize()
                 // SPIKE: with nothing listed, the search fades with the keyboard while it's dragged
                 .graphicsLayer {
-                    alpha = if (dragSession && !showingResults && fullImeHeight > 0) {
-                        (ime.getBottom(this).toFloat() / fullImeHeight).coerceIn(0f, 1f)
-                    } else 1f
+                    val shownHeight = openDrag?.shownHeight ?: 0
+                    alpha = when {
+                        openDrag?.active == true && !openDrag.failed ->
+                            if (shownHeight > 0) (ime.getBottom(this).toFloat() / shownHeight).coerceIn(0f, 1f) else 0f
+                        dragSession && !showingResults && fullImeHeight > 0 ->
+                            (ime.getBottom(this).toFloat() / fullImeHeight).coerceIn(0f, 1f)
+                        else -> 1f
+                    }
                 }
                 // Opaque, so the page underneath doesn't show through the results.
                 // With the wallpaper shown, let a little of it through like the rest of the launcher.
@@ -216,6 +234,8 @@ fun SearchOverlay(
                     searchText = searchText,
                     isExpanded = true,
                     autoFocus = true,
+                    showKeyboardOnFocus = !openingByDrag,
+                    onFocused = { openDrag?.attach() },
                     onExpandedChange = {},
                     onSearchTextChanged = onSearchTextChanged,
                     onSearchDone = { _, keyboardController -> onSearchDone(keyboardController) }
