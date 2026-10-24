@@ -18,19 +18,26 @@ import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.abs
 
 /**
- * Follows a swipe up that starts in the bottom [zoneFraction] of this element.
+ * Follows a swipe up that starts in the bottom [zoneFraction] of this element, and while
+ * [takesOverAnyDrag] is true, any vertical drag anywhere, up or down.
  *
- * [onSwipeStart] is called once the swipe is clearly upwards, then [onSwipe] with how far the finger has
- * moved up since it touched down, and [onSwipeEnd] with the upward speed (px/s) when the finger lifts.
+ * Put it on a parent of everything the swipe opens, so it sees every touch first. Both conditions are
+ * checked when a finger touches down, so nothing switches off in the middle of a swipe.
+ *
+ * [onSwipeStart] is called once the swipe is clearly vertical, then [onSwipe] with how far the finger has
+ * moved up since it touched down (negative is down), and [onSwipeEnd] with the upward speed (px/s) when
+ * the finger lifts.
  *
  * The zone stops above the system gesture / navigation bar area so the Android home gesture keeps working.
- * Swipes that start higher up, move sideways or move down are left untouched for the content underneath.
- * Once a swipe in the zone is clearly upwards it is consumed, so lists underneath don't also scroll.
+ * Touches that aren't taken are left untouched for the content underneath. Once a swipe is taken it is
+ * consumed, so lists underneath don't also scroll.
  */
 @Composable
 fun Modifier.swipeUpFromBottom(
     enabled: Boolean,
     zoneFraction: Float = 0.25f,
+    canStartFromZone: () -> Boolean,
+    takesOverAnyDrag: () -> Boolean,
     onSwipeStart: () -> Unit,
     onSwipe: (distanceUp: Float) -> Unit,
     onSwipeEnd: (velocityUp: Float) -> Unit
@@ -42,6 +49,8 @@ fun Modifier.swipeUpFromBottom(
         WindowInsets.systemGestures.getBottom(density),
         WindowInsets.navigationBars.getBottom(density)
     )
+    val currentCanStartFromZone by rememberUpdatedState(canStartFromZone)
+    val currentTakesOverAnyDrag by rememberUpdatedState(takesOverAnyDrag)
     val currentOnSwipeStart by rememberUpdatedState(onSwipeStart)
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     val currentOnSwipeEnd by rememberUpdatedState(onSwipeEnd)
@@ -49,9 +58,13 @@ fun Modifier.swipeUpFromBottom(
     return pointerInput(bottomExclusion, zoneFraction) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            val zoneTop = size.height * (1f - zoneFraction)
-            val zoneBottom = (size.height - bottomExclusion).toFloat()
-            if (down.position.y < zoneTop || down.position.y > zoneBottom) return@awaitEachGesture
+            val takeOver = currentTakesOverAnyDrag()
+            if (!takeOver) {
+                val zoneTop = size.height * (1f - zoneFraction)
+                val zoneBottom = (size.height - bottomExclusion).toFloat()
+                val inZone = down.position.y in zoneTop..zoneBottom
+                if (!inZone || !currentCanStartFromZone()) return@awaitEachGesture
+            }
 
             val touchSlop = viewConfiguration.touchSlop
             val velocityTracker = VelocityTracker()
@@ -77,15 +90,16 @@ fun Modifier.swipeUpFromBottom(
 
                 if (!claimed) {
                     val sideways = abs(drag.x) > touchSlop && abs(drag.x) >= abs(drag.y)
-                    val downwards = drag.y > touchSlop
+                    val downwards = !takeOver && drag.y > touchSlop
                     if (sideways || downwards) return@awaitEachGesture
-                    claimed = -drag.y > touchSlop && -drag.y > abs(drag.x)
+                    val vertical = if (takeOver) abs(drag.y) else -drag.y
+                    claimed = vertical > touchSlop && vertical > abs(drag.x)
                     if (claimed) currentOnSwipeStart()
                 }
 
                 if (claimed) {
                     change.consume()
-                    currentOnSwipe((-drag.y).coerceAtLeast(0f))
+                    currentOnSwipe(-drag.y)
                 }
             }
         }

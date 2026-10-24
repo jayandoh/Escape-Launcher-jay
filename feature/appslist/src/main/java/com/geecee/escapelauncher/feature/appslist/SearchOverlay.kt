@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,23 +75,25 @@ fun SearchOverlay(
     modifier: Modifier = Modifier,
     alignment: Alignment.Horizontal = Alignment.Start,
     showWallpaper: Boolean = false,
-    openDrag: SearchOpenDrag? = null
+    openDrag: SearchOpenDrag
 ) {
     // However the search closes, take the keyboard down with it at the same moment
     val keyboardController = LocalSoftwareKeyboardController.current
     var wasVisible by remember { mutableStateOf(visible) }
     LaunchedEffect(visible) {
-        if (wasVisible && !visible) {
-            openDrag?.cancel()
+        // Unless a new swipe has already taken over to reopen it
+        if (wasVisible && !visible && !openDrag.fingerDown) {
+            openDrag.cancel()
             keyboardController?.hide()
         }
         wasVisible = visible
     }
+    openDrag.overlayState.targetState = visible
 
     AnimatedVisibility(
-        visible = visible,
-        // SPIKE: when opened by a swipe, the keyboard and fade follow the finger instead
-        enter = if (openDrag?.active == true) EnterTransition.None else fadeIn() + slideInVertically { it / 10 },
+        visibleState = openDrag.overlayState,
+        // SPIKE: the swipe that opens it drives the keyboard and the fade, so there's no enter animation
+        enter = EnterTransition.None,
         // Quick, so it finishes together with the keyboard sliding away
         exit = fadeOut(tween(durationMillis = 150)),
         modifier = modifier
@@ -112,9 +115,9 @@ fun SearchOverlay(
 
         // SPIKE: dragging anywhere on the search moves the keyboard with the finger (Android 11+)
         val listState = rememberLazyListState()
-        val openingByDrag = remember { openDrag?.active == true }
-        val openFailed = openDrag?.failed == true
-        val dragging = listState.isScrollInProgress || (openDrag?.active == true && !openFailed)
+        val openFailed = openDrag.failed
+        val dragging = listState.isScrollInProgress || (openDrag.active && !openFailed)
+        DisposableEffect(Unit) { onDispose { openDrag.onFieldGone() } }
         val ime = WindowInsets.ime
         val density = LocalDensity.current
         var fullImeHeight by remember { mutableIntStateOf(0) }
@@ -130,7 +133,8 @@ fun SearchOverlay(
         val currentDragSession by rememberUpdatedState(dragSession)
         // Once a drag has faded the search out and it's closing, it stays invisible
         var fadedOutByDrag by remember { mutableStateOf(false) }
-        LaunchedEffect(visible) { if (visible) fadedOutByDrag = false }
+        // Every new swipe starts from a clean slate, even if it caught the search on its way out
+        LaunchedEffect(openDrag.generation) { fadedOutByDrag = false }
         LaunchedEffect(dragging) { if (dragging) dragSession = true }
         LaunchedEffect(openFailed) {
             // Android wouldn't let the finger move the keyboard, so open it the usual way
@@ -158,15 +162,25 @@ fun SearchOverlay(
             }
         }
 
+        // Safety net: however it got there, an open search with nothing listed and the keyboard down
+        // and at rest closes. The checks above close it sooner on the usual paths.
+        val atRestWithNothing = imeWasVisible && !showingResults && imeBottom == 0 && !imeHeadingVisible && !dragging
+        LaunchedEffect(atRestWithNothing) {
+            if (atRestWithNothing) {
+                fadedOutByDrag = true
+                currentOnDismiss()
+            }
+        }
+
         Column(
             Modifier
                 .fillMaxSize()
                 // SPIKE: with nothing listed, the search fades with the keyboard while it's dragged
                 .graphicsLayer {
-                    val shownHeight = openDrag?.shownHeight ?: 0
+                    val shownHeight = openDrag.shownHeight
                     alpha = when {
                         fadedOutByDrag -> 0f
-                        openDrag?.active == true && !openDrag.failed ->
+                        openDrag.active && !openDrag.failed ->
                             if (shownHeight > 0) (ime.getBottom(this).toFloat() / shownHeight).coerceIn(0f, 1f) else 0f
                         dragSession && !showingResults && fullImeHeight > 0 ->
                             (ime.getBottom(this).toFloat() / fullImeHeight).coerceIn(0f, 1f)
@@ -241,8 +255,9 @@ fun SearchOverlay(
                     searchText = searchText,
                     isExpanded = true,
                     autoFocus = true,
-                    showKeyboardOnFocus = !openingByDrag,
-                    onFocused = { openDrag?.attach() },
+                    // The swipe raises the keyboard itself
+                    showKeyboardOnFocus = false,
+                    onFocused = { openDrag.onFieldFocused() },
                     onExpandedChange = {},
                     onSearchTextChanged = onSearchTextChanged,
                     onSearchDone = { _, keyboardController -> onSearchDone(keyboardController) }

@@ -216,19 +216,24 @@ fun MainPagerScreen(
         }
     }
 
-    // Home Screen Pages
+    // Home Screen Pages, with the swipe up search above them. The swipe is followed from their shared
+    // parent so it sees every touch first, including ones on a search that is still moving or fading out.
     Box(
         Modifier
             .fillMaxSize()
             .swipeUpFromBottom(
-                // Stays on until the opening swipe that opened the search ends
-                enabled = swipeUpToSearch && (!searchOverlayOpen || searchOpenDrag.active),
+                enabled = swipeUpToSearch,
+                canStartFromZone = { !searchOverlayOpen },
+                takesOverAnyDrag = { searchOpenDrag.takesOverAnyDrag },
                 onSwipeStart = {
-                    // The apps list search pill may be open, e.g. with "Automatically Open Search"
-                    appsListViewModel.onSearchExpandedChanged(false)
+                    val opening = !searchOverlayOpen
                     searchOpenDrag.begin()
-                    appsListViewModel.openSearchOverlay()
-                    doHapticFeedBack(haptics, hapticFeedbackEnabled)
+                    if (opening) {
+                        // The apps list search pill may be open, e.g. with "Automatically Open Search"
+                        appsListViewModel.onSearchExpandedChanged(false)
+                        appsListViewModel.openSearchOverlay()
+                        doHapticFeedBack(haptics, hapticFeedbackEnabled)
+                    }
                 },
                 onSwipe = { distanceUp -> searchOpenDrag.drag(distanceUp) },
                 onSwipeEnd = { velocityUp -> searchOpenDrag.release(velocityUp) }
@@ -316,34 +321,34 @@ fun MainPagerScreen(
                 }
             }
         }
-    }
 
-    // Swipe up search
-    SearchOverlay(
-        visible = searchOverlayOpen,
-        searchText = searchOverlayText,
-        results = searchOverlayResults.apps,
-        alignment = appsListAlignment,
-        showWallpaper = showWallpaper,
-        openDrag = searchOpenDrag,
-        onSearchTextChanged = { appsListViewModel.onSearchOverlayTextChanged(it) },
-        onSearchDone = { keyboardController ->
-            val bestMatch = searchOverlayResults.apps.firstOrNull()
-            if (searchOverlayText.isNotBlank() && bestMatch != null) {
-                keyboardController?.hide()
-                openAppAndClearSearch(bestMatch)
-            } else {
+        // Swipe up search
+        SearchOverlay(
+            visible = searchOverlayOpen,
+            searchText = searchOverlayText,
+            results = searchOverlayResults.apps,
+            alignment = appsListAlignment,
+            showWallpaper = showWallpaper,
+            openDrag = searchOpenDrag,
+            onSearchTextChanged = { appsListViewModel.onSearchOverlayTextChanged(it) },
+            onSearchDone = { keyboardController ->
+                val bestMatch = searchOverlayResults.apps.firstOrNull()
+                if (searchOverlayText.isNotBlank() && bestMatch != null) {
+                    keyboardController?.hide()
+                    openAppAndClearSearch(bestMatch)
+                } else {
+                    doHapticFeedBack(haptics, hapticFeedbackEnabled)
+                }
+            },
+            onAppClick = { app -> openAppAndClearSearch(app) },
+            onDismiss = { appsListViewModel.closeSearchOverlay() },
+            onAppLongClick = { app ->
+                appsListViewModel.setBottomSheetVisible(true)
+                appsListViewModel.setBottomSheetApp(app)
                 doHapticFeedBack(haptics, hapticFeedbackEnabled)
             }
-        },
-        onAppClick = { app -> openAppAndClearSearch(app) },
-        onDismiss = { appsListViewModel.closeSearchOverlay() },
-        onAppLongClick = { app ->
-            appsListViewModel.setBottomSheetVisible(true)
-            appsListViewModel.setBottomSheetApp(app)
-            doHapticFeedBack(haptics, hapticFeedbackEnabled)
-        }
-    )
+        )
+    }
 
     // Bottom Sheet for apps from the apps list and the search overlay
     val showBottomSheet by appsListViewModel.showBottomSheet.collectAsState()
