@@ -111,9 +111,11 @@ fun SearchOverlay(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                if (searchText.isBlank()) {
+                if (!showingResults) {
                     Text(
-                        text = stringResource(R.string.type_to_search_apps),
+                        text = stringResource(
+                            if (searchText.isBlank()) R.string.type_to_search_apps else R.string.no_matching_apps
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         modifier = Modifier

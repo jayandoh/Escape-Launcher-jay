@@ -97,6 +97,7 @@
     <string name="apps_list_auto_search">Apri Ricerca Automaticamente</string>
     <string name="swipe_up_to_search">Scorri verso l\'alto per cercare</string>
     <string name="type_to_search_apps">Digita per cercare le app</string>
+    <string name="no_matching_apps">Nessuna app corrispondente</string>
     <string name="sponsor">Sponsor</string>
     <string name="font_licences">Licenze Font</string>
     <string name="show_weather">Mostra Meteo</string>

@@ -73,6 +73,7 @@
     <string name="apps_list_auto_search">Abrir Búsqueda Automáticamente</string>
     <string name="swipe_up_to_search">Desliza hacia arriba para buscar</string>
     <string name="type_to_search_apps">Escribe para buscar apps</string>
+    <string name="no_matching_apps">No hay apps que coincidan</string>
     <string name="sponsor">Apoyar</string>
     <string name="font_licences">Licencias de Fuentes</string>
     <string name="show_weather">Mostrar Tiempo</string>
