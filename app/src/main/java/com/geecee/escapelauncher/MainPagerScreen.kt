@@ -215,7 +215,9 @@ fun MainPagerScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .swipeUpFromBottom(enabled = swipeUpToSearch && !searchOverlayOpen && !searchExpanded) {
+            .swipeUpFromBottom(enabled = swipeUpToSearch && !searchOverlayOpen) {
+                // The apps list search pill may be open, e.g. with "Automatically Open Search"
+                appsListViewModel.onSearchExpandedChanged(false)
                 appsListViewModel.openSearchOverlay()
                 doHapticFeedBack(haptics, hapticFeedbackEnabled)
             }
@@ -322,6 +324,7 @@ fun MainPagerScreen(
             }
         },
         onAppClick = { app -> openAppAndClearSearch(app) },
+        onDismiss = { appsListViewModel.closeSearchOverlay() },
         onAppLongClick = { app ->
             appsListViewModel.setBottomSheetVisible(true)
             appsListViewModel.setBottomSheetApp(app)

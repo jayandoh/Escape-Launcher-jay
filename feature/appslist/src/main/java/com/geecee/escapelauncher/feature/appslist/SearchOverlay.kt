@@ -9,6 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -25,7 +27,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -40,7 +47,10 @@ import com.geecee.escapelauncher.core.ui.composables.HomeScreenItem
  * Full screen app search opened by swiping up from the bottom of the launcher.
  *
  * The search field sits just above the keyboard and the best match is listed closest to it.
+ * While nothing is listed, [onDismiss] is called when the keyboard is dismissed or the empty space is tapped,
+ * so a single back press closes it.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchOverlay(
     visible: Boolean,
@@ -50,6 +60,7 @@ fun SearchOverlay(
     onSearchDone: (SoftwareKeyboardController?) -> Unit,
     onAppClick: (InstalledApp) -> Unit,
     onAppLongClick: (InstalledApp) -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     alignment: Alignment.Horizontal = Alignment.Start,
     showWallpaper: Boolean = false
@@ -65,6 +76,21 @@ fun SearchOverlay(
             Alignment.CenterHorizontally -> Alignment.BottomCenter
             else -> Alignment.BottomStart
         }
+        val showingResults = searchText.isNotBlank() && results.isNotEmpty()
+        val currentShowingResults by rememberUpdatedState(showingResults)
+        val currentOnDismiss by rememberUpdatedState(onDismiss)
+
+        // The keyboard takes the first back press itself. With nothing listed there is nothing
+        // to look at without it, so that press closes the search too.
+        val imeVisible = WindowInsets.isImeVisible
+        var imeWasVisible by remember { mutableStateOf(false) }
+        LaunchedEffect(imeVisible) {
+            if (imeVisible) {
+                imeWasVisible = true
+            } else if (imeWasVisible && !currentShowingResults) {
+                currentOnDismiss()
+            }
+        }
 
         Column(
             Modifier
@@ -72,11 +98,11 @@ fun SearchOverlay(
                 // Opaque, so the page underneath doesn't show through the results.
                 // With the wallpaper shown, let a little of it through like the rest of the launcher.
                 .background(MaterialTheme.colorScheme.background.copy(alpha = if (showWallpaper) 0.9f else 1f))
-                // Keep touches from reaching the page underneath
+                // Keep touches from reaching the page underneath. With nothing listed, tapping closes the search.
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = {}
+                    onClick = { if (!showingResults) onDismiss() }
                 )
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
         ) {
