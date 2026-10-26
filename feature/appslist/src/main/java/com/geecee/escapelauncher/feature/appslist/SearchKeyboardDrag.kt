@@ -29,8 +29,10 @@ import androidx.core.view.WindowInsetsAnimationControllerCompat
 import androidx.core.view.WindowInsetsCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Upward release speed, in px/s, past which a swipe counts as a flick */
 private const val FLING_VELOCITY = 1000f
@@ -102,7 +104,7 @@ class SearchKeyboardDrag(private val view: View, private val scope: CoroutineSco
      */
     val nestedScrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            if (source != NestedScrollSource.UserInput || !isSupported) return Offset.Zero
+            if (!canDragOnSearch(source)) return Offset.Zero
             if (!nestedDragging) {
                 // Only a drag down while the keyboard is up starts moving it before the list
                 if (available.y <= 0f || currentImeBottom() == 0) return Offset.Zero
@@ -112,7 +114,7 @@ class SearchKeyboardDrag(private val view: View, private val scope: CoroutineSco
         }
 
         override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-            if (source != NestedScrollSource.UserInput || !isSupported) return Offset.Zero
+            if (!canDragOnSearch(source)) return Offset.Zero
             // Dragging up with nothing left for the list to scroll brings the keyboard up
             if (available.y >= 0f) return Offset.Zero
             if (!nestedDragging) startNestedDrag()
@@ -126,6 +128,13 @@ class SearchKeyboardDrag(private val view: View, private val scope: CoroutineSco
             return available
         }
     }
+
+    /**
+     * A finger drag on the search, unless the search is already closing: a drag that lands on it while it fades
+     * out would otherwise bring the keyboard back up with no search above it
+     */
+    private fun canDragOnSearch(source: NestedScrollSource): Boolean =
+        source == NestedScrollSource.UserInput && isSupported && (nestedDragging || overlayState.targetState)
 
     private fun startNestedDrag() {
         begin(opening = false)
@@ -252,6 +261,14 @@ class SearchKeyboardDrag(private val view: View, private val scope: CoroutineSco
                         }
                     }
                 })
+            // Android can sit on a request for up to 2 s, for example while the keyboard app gets ready again
+            // after a while unused. Rather than show nothing for that long, bring the keyboard up the usual way.
+            delay(CONTROL_WAIT)
+            if (id == requestId && requestPending) {
+                requestId++
+                signal.cancel()
+                fail()
+            }
         }
     }
 
@@ -307,6 +324,9 @@ class SearchKeyboardDrag(private val view: View, private val scope: CoroutineSco
     }
 
     companion object {
+        /** Android usually hands the keyboard over within about 200 ms */
+        private val CONTROL_WAIT = 400.milliseconds
+
         /** Apps can move the keyboard with the finger from Android 11 */
         val isSupported: Boolean
             @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.R)
