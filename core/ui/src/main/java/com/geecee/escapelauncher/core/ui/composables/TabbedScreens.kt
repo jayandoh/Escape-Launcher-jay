@@ -329,7 +329,12 @@ fun TabBar(
             )
         }
 
-        val displayList = if (reverse) screens.reversed() else screens
+        // A lone tab is always selected, so tapping it would do nothing
+        val displayList = when {
+            screens.size <= 1 -> emptyList()
+            reverse -> screens.reversed()
+            else -> screens
+        }
         displayList.forEach { screen ->
             val index = screens.indexOf(screen)
             Tab(
@@ -386,8 +391,11 @@ fun TabDisplay(
         (imeInsets.getBottom(this) - navBarInsets.getBottom(this)).coerceAtLeast(0).toDp()
     }
 
+    val showTabBar = showSearch || screens.size > 1
+
+    // Without a tab bar, keep a small gap above the navigation bar instead
     val topOfTabBarHeight =
-        56.dp + 30.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        (if (showTabBar) 56.dp + 30.dp else 10.dp) + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     val pagerState = rememberPagerState(
         initialPage = 0, initialPageOffsetFraction = 0f, pageCount = { screens.size })
@@ -434,42 +442,44 @@ fun TabDisplay(
             }
         }
 
-        TabBar(
-            modifier = Modifier
-                .align(
-                    when (alignment) {
-                        Alignment.End -> {
-                            Alignment.BottomEnd
-                        }
+        if (showTabBar) {
+            TabBar(
+                modifier = Modifier
+                    .align(
+                        when (alignment) {
+                            Alignment.End -> {
+                                Alignment.BottomEnd
+                            }
 
-                        Alignment.CenterHorizontally -> {
-                            Alignment.BottomCenter
-                        }
+                            Alignment.CenterHorizontally -> {
+                                Alignment.BottomCenter
+                            }
 
-                        else -> {
-                            Alignment.BottomStart
+                            else -> {
+                                Alignment.BottomStart
+                            }
                         }
-                    }
-                )
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
-                )
-                .padding(
-                    start = if (alignment == Alignment.Start || alignment == Alignment.CenterHorizontally) 30.dp else 0.dp,
-                    top = 0.dp,
-                    bottom = 30.dp,
-                    end = if (alignment == Alignment.End || alignment == Alignment.CenterHorizontally) 30.dp else 0.dp
-                ),
-            screens = screens,
-            selectedTabIndex = selectedTabIndex,
-            reverse = alignment == Alignment.End,
-            showSearch = showSearch,
-            searchText = searchText,
-            searchExpanded = searchExpanded,
-            onSearchExpandedChange = onSearchExpandedChange,
-            onSearchTextChanged = onSearchTextChanged,
-            onSearchDone = onSearchDone
-        )
+                    )
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                    )
+                    .padding(
+                        start = if (alignment == Alignment.Start || alignment == Alignment.CenterHorizontally) 30.dp else 0.dp,
+                        top = 0.dp,
+                        bottom = 30.dp,
+                        end = if (alignment == Alignment.End || alignment == Alignment.CenterHorizontally) 30.dp else 0.dp
+                    ),
+                screens = screens,
+                selectedTabIndex = selectedTabIndex,
+                reverse = alignment == Alignment.End,
+                showSearch = showSearch,
+                searchText = searchText,
+                searchExpanded = searchExpanded,
+                onSearchExpandedChange = onSearchExpandedChange,
+                onSearchTextChanged = onSearchTextChanged,
+                onSearchDone = onSearchDone
+            )
+        }
     }
 }
 
