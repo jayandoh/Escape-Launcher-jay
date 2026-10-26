@@ -103,7 +103,7 @@ fun SwipeUpAreaEditor(
 
         val areaTop = screenHeight - gestureStrip - heightPx
         val heightDp = heightPx / density.density
-        // Shown the same way as the old "bottom quarter": the share of the screen it covers, strip included
+        // Shown as the share of the screen it covers, strip included, so the default reads as 20%
         val percent = ((heightPx + gestureStrip) / screenHeight * 100).roundToInt()
         val primary = MaterialTheme.colorScheme.primary
         val tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)

@@ -49,7 +49,6 @@ import com.geecee.escapelauncher.feature.appslist.AppsList
 import com.geecee.escapelauncher.feature.appslist.AppsListViewModel
 import com.geecee.escapelauncher.feature.appslist.SearchKeyboardDrag
 import com.geecee.escapelauncher.feature.appslist.SearchOverlay
-import com.geecee.escapelauncher.feature.appslist.SwipeUpAreaEditor
 import com.geecee.escapelauncher.feature.homescreen.HomeScreen
 import com.geecee.escapelauncher.feature.screentime.ScreenTimeDashboard
 import com.geecee.escapelauncher.feature.screentime.ScreenTimeViewModel
@@ -99,9 +98,8 @@ fun MainPagerScreen(
     val searchOverlayOpen by appsListViewModel.searchOverlayOpen.collectAsState()
     val searchOverlayText by appsListViewModel.searchOverlayText.collectAsState()
     val searchOverlayResults by appsListViewModel.searchOverlayResults.collectAsState()
-    // Where the swipe up area ends, and adjusting it on the home screen
+    // Where the swipe up area ends
     val swipeUpAreaHeightDp by appsListViewModel.swipeUpAreaHeightDp.collectAsState()
-    val editingSwipeUpArea by viewModel.editingSwipeUpArea.collectAsState()
     val density = LocalDensity.current
 
     // Lets the swipe that opens the search pull the keyboard up with the finger
@@ -131,12 +129,9 @@ fun MainPagerScreen(
         appsListViewModel.quickSearchMatches.collect { app -> currentOpenAppAndClearSearch(app) }
     }
 
-    // Pressing home closes the search overlay, and cancels adjusting the swipe up area
+    // Pressing home closes the search overlay
     LaunchedEffect(Unit) {
-        globalViewModel.navigateHomeEvent.collect {
-            appsListViewModel.closeSearchOverlay()
-            viewModel.stopEditingSwipeUpArea()
-        }
+        globalViewModel.navigateHomeEvent.collect { appsListViewModel.closeSearchOverlay() }
     }
 
     // Turning the setting off closes the search overlay
@@ -232,7 +227,7 @@ fun MainPagerScreen(
         Modifier
             .fillMaxSize()
             .swipeUpFromBottom(
-                enabled = swipeUpToSearch && !editingSwipeUpArea,
+                enabled = swipeUpToSearch,
                 areaHeightPx = { height, gestureStrip ->
                     SwipeUpArea.heightPx(swipeUpAreaHeightDp, height, gestureStrip, density.density)
                 },
@@ -361,19 +356,6 @@ fun MainPagerScreen(
                 appsListViewModel.setBottomSheetApp(app)
                 doHapticFeedBack(haptics, hapticFeedbackEnabled)
             }
-        )
-    }
-
-    // Adjusting the swipe up area, over the real home screen
-    if (editingSwipeUpArea) {
-        SwipeUpAreaEditor(
-            savedHeightDp = swipeUpAreaHeightDp,
-            hapticFeedbackEnabled = hapticFeedbackEnabled,
-            onDone = { heightDp ->
-                appsListViewModel.setSwipeUpAreaHeightDp(heightDp)
-                viewModel.stopEditingSwipeUpArea()
-            },
-            onCancel = { viewModel.stopEditingSwipeUpArea() }
         )
     }
 

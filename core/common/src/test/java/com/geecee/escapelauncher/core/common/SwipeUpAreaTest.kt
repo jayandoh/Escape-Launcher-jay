@@ -11,8 +11,8 @@ class SwipeUpAreaTest {
     private val density = 2.625f
 
     @Test
-    fun `without a saved height it matches the bottom quarter of the screen`() {
-        assertEquals(600f - strip, SwipeUpArea.heightPx(null, screen, strip, density), 0.01f)
+    fun `without a saved height it covers the bottom fifth of the screen`() {
+        assertEquals(480f - strip, SwipeUpArea.heightPx(null, screen, strip, density), 0.01f)
     }
 
     @Test

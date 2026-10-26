@@ -60,6 +60,8 @@ class AppsListViewModel @Inject constructor(
     // Kept current so it's already known when the home screen is drawn again, e.g. coming back from settings
     val swipeUpAreaHeightDp: StateFlow<Float?> = searchSettingsRepository.swipeUpAreaHeightDp
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    /** Every saved value as it loads, for screens that must wait for the real one */
+    val swipeUpAreaHeightDpUpdates: Flow<Float?> = searchSettingsRepository.swipeUpAreaHeightDp
     fun setSwipeUpAreaHeightDp(heightDp: Float?) {
         viewModelScope.launch { searchSettingsRepository.setSwipeUpAreaHeightDp(heightDp) }
     }

@@ -5,7 +5,7 @@ package com.geecee.escapelauncher.core.common
  *
  * It sits just above Android's gesture strip (or 3-button bar), which the launcher never receives touches
  * from. Its height is saved as a distance in dp so it gives the same thumb reach on any phone. Until one
- * is saved, it covers the bottom quarter of the screen, as it always has.
+ * is saved, it covers the bottom fifth of the screen.
  */
 object SwipeUpArea {
     /** Thinner than a fingertip is too hard to hit on purpose */
@@ -15,7 +15,7 @@ object SwipeUpArea {
     const val MAX_SCREEN_FRACTION = 0.5f
 
     /** Used until a height is saved */
-    const val DEFAULT_SCREEN_FRACTION = 0.25f
+    const val DEFAULT_SCREEN_FRACTION = 0.2f
 
     /** How much one accessibility increase / decrease step changes it */
     const val STEP_DP = 8f
