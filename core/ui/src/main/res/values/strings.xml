@@ -107,6 +107,14 @@
     <string name="swipe_up_to_search">Swipe up to search</string>
     <string name="type_to_search_apps">Type to search apps</string>
     <string name="no_matching_apps">No matching apps</string>
+    <string name="swipe_up_area">Swipe-up area</string>
+    <string name="swipe_up_area_title">Drag to set where swipe up to search starts</string>
+    <string name="swipe_up_area_note">Applies to Home, All Apps and Screen Time</string>
+    <string name="swipe_up_area_hint">Swipes that start here open search</string>
+    <string name="swipe_up_area_height">Swipe-up area height</string>
+    <string name="swipe_up_area_taller">Make taller</string>
+    <string name="swipe_up_area_shorter">Make shorter</string>
+    <string name="reset">Reset</string>
     <string name="sponsor">Sponsor</string>
     <string name="font_licences">Font Licences</string>
     <string name="show_weather">Show Weather</string>

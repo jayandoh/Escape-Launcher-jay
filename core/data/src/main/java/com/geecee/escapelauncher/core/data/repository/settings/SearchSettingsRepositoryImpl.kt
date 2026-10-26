@@ -33,4 +33,11 @@ class SearchSettingsRepositoryImpl @Inject constructor(
     override suspend fun setSwipeUpToSearch(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.SWIPE_UP_TO_SEARCH] = enabled }
     }
+    override val swipeUpAreaHeightDp: Flow<Float?> = dataStore.data.map { it[PreferencesKeys.SWIPE_UP_AREA_HEIGHT_DP] }
+    override suspend fun setSwipeUpAreaHeightDp(heightDp: Float?) {
+        dataStore.edit {
+            if (heightDp == null) it.remove(PreferencesKeys.SWIPE_UP_AREA_HEIGHT_DP)
+            else it[PreferencesKeys.SWIPE_UP_AREA_HEIGHT_DP] = heightDp
+        }
+    }
 }

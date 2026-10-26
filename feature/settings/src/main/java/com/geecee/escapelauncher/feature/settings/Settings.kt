@@ -90,11 +90,13 @@ sealed interface SettingsNavKey : NavKey {
  *
  * @param goBack When back button is pressed
  * @param activity This is needed for some settings
+ * @param editSwipeUpArea Leaves settings to adjust the swipe up area on the home screen
  */
 @Composable
 fun Settings(
     goBack: () -> Unit,
     activity: Activity,
+    editSwipeUpArea: () -> Unit,
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     hiddenAppsViewModel: HiddenAppsViewModel = hiltViewModel(),
     openChallengeViewModel: OpenChallengeViewModel = hiltViewModel()
@@ -140,7 +142,8 @@ fun Settings(
                     MainSettingsPage(
                         goBack = { goBack() },
                         showPolicyDialog = { showPolicyDialog.value = true },
-                        onNavigate = { key -> backStack.add(key) }
+                        onNavigate = { key -> backStack.add(key) },
+                        onEditSwipeUpArea = editSwipeUpArea
                     )
                 }
                 entry<SettingsNavKey.HiddenApps> {

@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class AppsListViewModel @Inject constructor(
     appearanceRepository: AppearanceRepository,
-    searchSettingsRepository: SearchSettingsRepository,
+    private val searchSettingsRepository: SearchSettingsRepository,
     launcherBehaviorRepository: LauncherBehaviorRepository,
     screenTimeSettingsRepository: ScreenTimeSettingsRepository,
     private val modifiedAppsRepository: ModifiedAppsRepository,
@@ -57,6 +57,12 @@ class AppsListViewModel @Inject constructor(
     val automaticallyOpenAppsInSearch = searchSettingsRepository.automaticallyOpenAppsInSearch
     val hiddenAppsInSearch = searchSettingsRepository.showHiddenAppsInSearch
     val swipeUpToSearch = searchSettingsRepository.swipeUpToSearch
+    // Kept current so it's already known when the home screen is drawn again, e.g. coming back from settings
+    val swipeUpAreaHeightDp: StateFlow<Float?> = searchSettingsRepository.swipeUpAreaHeightDp
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    fun setSwipeUpAreaHeightDp(heightDp: Float?) {
+        viewModelScope.launch { searchSettingsRepository.setSwipeUpAreaHeightDp(heightDp) }
+    }
     val hapticFeedBackEnabled = launcherBehaviorRepository.hapticFeedBackEnabled
     val showWallpaper = appearanceRepository.showWallpaper
 

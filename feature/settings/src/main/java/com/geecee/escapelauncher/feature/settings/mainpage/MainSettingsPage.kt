@@ -66,6 +66,7 @@ fun MainSettingsPage(
     goBack: () -> Unit,
     showPolicyDialog: () -> Unit,
     onNavigate: (SettingsNavKey) -> Unit,
+    onEditSwipeUpArea: () -> Unit,
     mainSettingsPageViewModel: MainSettingsPageViewModel = hiltViewModel(),
     weatherViewModel: WeatherViewModel = hiltViewModel(LocalActivity.current as ComponentActivity)
 ) {
@@ -404,10 +405,22 @@ fun MainSettingsPage(
                 SettingsSwitch(
                     label = stringResource(id = R.string.swipe_up_to_search),
                     checked = uiState.swipeUpToSearch,
-                    isBottomOfGroup = true,
+                    isBottomOfGroup = !uiState.swipeUpToSearch,
                     onCheckedChange = {
                         mainSettingsPageViewModel.setSwipeUpToSearch(it)
                     })
+            }
+
+            // Only there while swipe up to search is on
+            if (uiState.swipeUpToSearch) {
+                item(key = "swipe_up_area") {
+                    SettingsNavigationItem(
+                        label = stringResource(id = R.string.swipe_up_area),
+                        diagonalArrow = false,
+                        isBottomOfGroup = true,
+                        onClick = onEditSwipeUpArea
+                    )
+                }
             }
 
             //Screen time

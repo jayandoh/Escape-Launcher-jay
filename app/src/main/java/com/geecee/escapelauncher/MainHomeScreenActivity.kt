@@ -353,6 +353,10 @@ class MainHomeScreenActivity : ComponentActivity() {
                                 backStack.removeLastOrNull()
                             },
                             activity = this@MainHomeScreenActivity,
+                            editSwipeUpArea = {
+                                mainPagerViewModel.startEditingSwipeUpArea()
+                                backStack.removeLastOrNull()
+                            }
                         )
                     }
                     entry<AppNavKey.Onboarding> {

@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.abs
 
 /**
- * Follows a swipe up that starts in the bottom [zoneFraction] of this element, and while
+ * Follows a swipe up that starts in the area at the bottom of this element, and while
  * [takesOverAnyDrag] is true, any vertical drag anywhere, up or down.
  *
  * Put it on a parent of everything the swipe opens, so it sees every touch first. Both conditions are
@@ -28,14 +28,15 @@ import kotlin.math.abs
  * moved up since it touched down (negative is down), and [onSwipeEnd] with the upward speed (px/s) when
  * the finger lifts.
  *
- * The zone stops above the system gesture / navigation bar area so the Android home gesture keeps working.
+ * The area sits just above the system gesture / navigation bar strip so the Android home gesture keeps
+ * working. [areaHeightPx] gives its height above that strip from the element's height and the strip's.
  * Touches that aren't taken are left untouched for the content underneath. Once a swipe is taken it is
  * consumed, so lists underneath don't also scroll.
  */
 @Composable
 fun Modifier.swipeUpFromBottom(
     enabled: Boolean,
-    zoneFraction: Float = 0.25f,
+    areaHeightPx: (heightPx: Float, gestureStripPx: Float) -> Float,
     canStartFromZone: () -> Boolean,
     takesOverAnyDrag: () -> Boolean,
     onSwipeStart: () -> Unit,
@@ -49,19 +50,20 @@ fun Modifier.swipeUpFromBottom(
         WindowInsets.systemGestures.getBottom(density),
         WindowInsets.navigationBars.getBottom(density)
     )
+    val currentAreaHeightPx by rememberUpdatedState(areaHeightPx)
     val currentCanStartFromZone by rememberUpdatedState(canStartFromZone)
     val currentTakesOverAnyDrag by rememberUpdatedState(takesOverAnyDrag)
     val currentOnSwipeStart by rememberUpdatedState(onSwipeStart)
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     val currentOnSwipeEnd by rememberUpdatedState(onSwipeEnd)
 
-    return pointerInput(bottomExclusion, zoneFraction) {
+    return pointerInput(bottomExclusion) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             val takeOver = currentTakesOverAnyDrag()
             if (!takeOver) {
-                val zoneTop = size.height * (1f - zoneFraction)
                 val zoneBottom = (size.height - bottomExclusion).toFloat()
+                val zoneTop = zoneBottom - currentAreaHeightPx(size.height.toFloat(), bottomExclusion.toFloat())
                 val inZone = down.position.y in zoneTop..zoneBottom
                 if (!inZone || !currentCanStartFromZone()) return@awaitEachGesture
             }

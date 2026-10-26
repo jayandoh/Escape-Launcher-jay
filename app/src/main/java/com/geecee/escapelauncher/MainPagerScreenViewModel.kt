@@ -74,6 +74,19 @@ class MainPagerScreenViewModel @Inject constructor(
         _isDefaultLauncher.value = getIsDefaultLauncherUseCase()
     }
 
+    // Adjusting the swipe up area, on the real home screen
+    private val _editingSwipeUpArea = MutableStateFlow(false)
+    val editingSwipeUpArea: StateFlow<Boolean> = _editingSwipeUpArea.asStateFlow()
+
+    fun startEditingSwipeUpArea() {
+        _editingSwipeUpArea.value = true
+        viewModelScope.launch { goToMainPage() }
+    }
+
+    fun stopEditingSwipeUpArea() {
+        _editingSwipeUpArea.value = false
+    }
+
     fun lockScreen() {
         lockScreenUseCase()
     }

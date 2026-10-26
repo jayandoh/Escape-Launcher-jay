@@ -85,6 +85,14 @@
     <string name="swipe_up_to_search">Desprazar cara arriba para buscar</string>
     <string name="type_to_search_apps">Escribe para buscar apps</string>
     <string name="no_matching_apps">Non hai apps que coincidan</string>
+    <string name="swipe_up_area">Zona para desprazar cara arriba</string>
+    <string name="swipe_up_area_title">Arrastra para escoller onde comeza o desprazamento para buscar</string>
+    <string name="swipe_up_area_note">Aplícase a Inicio, Todas as Apps e Tempo de pantalla</string>
+    <string name="swipe_up_area_hint">Os desprazamentos que comezan aquí abren a busca</string>
+    <string name="swipe_up_area_height">Altura da zona para desprazar</string>
+    <string name="swipe_up_area_taller">Facer máis alta</string>
+    <string name="swipe_up_area_shorter">Facer máis baixa</string>
+    <string name="reset">Restablecer</string>
     <string name="sponsor">Patrocinio</string>
     <string name="font_licences">Licenzas das tipografías</string>
     <string name="show_weather">Mostrar a Meteoroloxía</string>

@@ -74,6 +74,14 @@
     <string name="swipe_up_to_search">Desliza hacia arriba para buscar</string>
     <string name="type_to_search_apps">Escribe para buscar apps</string>
     <string name="no_matching_apps">No hay apps que coincidan</string>
+    <string name="swipe_up_area">Zona para deslizar hacia arriba</string>
+    <string name="swipe_up_area_title">Arrastra para elegir dónde empieza el deslizamiento para buscar</string>
+    <string name="swipe_up_area_note">Se aplica a Inicio, Todas las Apps y Tiempo de pantalla</string>
+    <string name="swipe_up_area_hint">Los deslizamientos que empiezan aquí abren la búsqueda</string>
+    <string name="swipe_up_area_height">Altura de la zona para deslizar</string>
+    <string name="swipe_up_area_taller">Hacer más alta</string>
+    <string name="swipe_up_area_shorter">Hacer más baja</string>
+    <string name="reset">Restablecer</string>
     <string name="sponsor">Apoyar</string>
     <string name="font_licences">Licencias de Fuentes</string>
     <string name="show_weather">Mostrar Tiempo</string>

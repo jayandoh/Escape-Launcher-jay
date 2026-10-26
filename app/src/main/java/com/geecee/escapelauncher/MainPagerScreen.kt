@@ -29,11 +29,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.geecee.escapelauncher.core.common.DefaultSettings
+import com.geecee.escapelauncher.core.common.SwipeUpArea
 import com.geecee.escapelauncher.core.domain.managedprofiles.ManagedProfileType
 import com.geecee.escapelauncher.core.model.InstalledApp
 import com.geecee.escapelauncher.core.ui.DefaultSettingsUi
@@ -47,6 +49,7 @@ import com.geecee.escapelauncher.feature.appslist.AppsList
 import com.geecee.escapelauncher.feature.appslist.AppsListViewModel
 import com.geecee.escapelauncher.feature.appslist.SearchKeyboardDrag
 import com.geecee.escapelauncher.feature.appslist.SearchOverlay
+import com.geecee.escapelauncher.feature.appslist.SwipeUpAreaEditor
 import com.geecee.escapelauncher.feature.homescreen.HomeScreen
 import com.geecee.escapelauncher.feature.screentime.ScreenTimeDashboard
 import com.geecee.escapelauncher.feature.screentime.ScreenTimeViewModel
@@ -96,6 +99,11 @@ fun MainPagerScreen(
     val searchOverlayOpen by appsListViewModel.searchOverlayOpen.collectAsState()
     val searchOverlayText by appsListViewModel.searchOverlayText.collectAsState()
     val searchOverlayResults by appsListViewModel.searchOverlayResults.collectAsState()
+    // Where the swipe up area ends, and adjusting it on the home screen
+    val swipeUpAreaHeightDp by appsListViewModel.swipeUpAreaHeightDp.collectAsState()
+    val editingSwipeUpArea by viewModel.editingSwipeUpArea.collectAsState()
+    val density = LocalDensity.current
+
     // Lets the swipe that opens the search pull the keyboard up with the finger
     val view = LocalView.current
     val searchKeyboardDrag = remember(view) { SearchKeyboardDrag(view, coroutineScope) }
@@ -123,9 +131,12 @@ fun MainPagerScreen(
         appsListViewModel.quickSearchMatches.collect { app -> currentOpenAppAndClearSearch(app) }
     }
 
-    // Pressing home closes the search overlay
+    // Pressing home closes the search overlay, and cancels adjusting the swipe up area
     LaunchedEffect(Unit) {
-        globalViewModel.navigateHomeEvent.collect { appsListViewModel.closeSearchOverlay() }
+        globalViewModel.navigateHomeEvent.collect {
+            appsListViewModel.closeSearchOverlay()
+            viewModel.stopEditingSwipeUpArea()
+        }
     }
 
     // Turning the setting off closes the search overlay
@@ -221,7 +232,10 @@ fun MainPagerScreen(
         Modifier
             .fillMaxSize()
             .swipeUpFromBottom(
-                enabled = swipeUpToSearch,
+                enabled = swipeUpToSearch && !editingSwipeUpArea,
+                areaHeightPx = { height, gestureStrip ->
+                    SwipeUpArea.heightPx(swipeUpAreaHeightDp, height, gestureStrip, density.density)
+                },
                 canStartFromZone = { !searchOverlayOpen },
                 takesOverAnyDrag = { searchKeyboardDrag.takesOverAnyDrag },
                 onSwipeStart = {
@@ -347,6 +361,19 @@ fun MainPagerScreen(
                 appsListViewModel.setBottomSheetApp(app)
                 doHapticFeedBack(haptics, hapticFeedbackEnabled)
             }
+        )
+    }
+
+    // Adjusting the swipe up area, over the real home screen
+    if (editingSwipeUpArea) {
+        SwipeUpAreaEditor(
+            savedHeightDp = swipeUpAreaHeightDp,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
+            onDone = { heightDp ->
+                appsListViewModel.setSwipeUpAreaHeightDp(heightDp)
+                viewModel.stopEditingSwipeUpArea()
+            },
+            onCancel = { viewModel.stopEditingSwipeUpArea() }
         )
     }
 
