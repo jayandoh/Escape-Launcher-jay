@@ -30,6 +30,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.geecee.escapelauncher.core.common.DefaultSettings
@@ -44,6 +45,7 @@ import com.geecee.escapelauncher.core.ui.utils.doHapticFeedBack
 import com.geecee.escapelauncher.core.ui.utils.swipeUpFromBottom
 import com.geecee.escapelauncher.feature.appslist.AppsList
 import com.geecee.escapelauncher.feature.appslist.AppsListViewModel
+import com.geecee.escapelauncher.feature.appslist.SearchKeyboardDrag
 import com.geecee.escapelauncher.feature.appslist.SearchOverlay
 import com.geecee.escapelauncher.feature.homescreen.HomeScreen
 import com.geecee.escapelauncher.feature.screentime.ScreenTimeDashboard
@@ -88,13 +90,15 @@ fun MainPagerScreen(
     val isDefaultLauncher by viewModel.isDefaultLauncher.collectAsState()
 
     // Search
-    val searchExpanded by appsListViewModel.searchExpanded.collectAsState()
     val appsListAlignment by appsListViewModel.appsAlignment.collectAsState(initial = DefaultSettingsUi.APPS_ALIGNMENT)
     val showWallpaper by appsListViewModel.showWallpaper.collectAsState(initial = DefaultSettings.SHOW_WALLPAPER)
     val swipeUpToSearch by appsListViewModel.swipeUpToSearch.collectAsState(initial = DefaultSettings.SWIPE_UP_TO_SEARCH)
     val searchOverlayOpen by appsListViewModel.searchOverlayOpen.collectAsState()
     val searchOverlayText by appsListViewModel.searchOverlayText.collectAsState()
     val searchOverlayResults by appsListViewModel.searchOverlayResults.collectAsState()
+    // Lets the swipe that opens the search pull the keyboard up with the finger
+    val view = LocalView.current
+    val searchKeyboardDrag = remember(view) { SearchKeyboardDrag(view, coroutineScope) }
 
     // Opens an app picked from the apps list or either search, then clears both searches
     val openAppAndClearSearch: (InstalledApp) -> Unit = { app ->
@@ -211,16 +215,28 @@ fun MainPagerScreen(
         }
     }
 
-    // Home Screen Pages
+    // Home Screen Pages, with the swipe up search above them. The swipe is followed from their shared
+    // parent so it sees every touch first, including ones on a search that is still moving or fading out.
     Box(
         Modifier
             .fillMaxSize()
-            .swipeUpFromBottom(enabled = swipeUpToSearch && !searchOverlayOpen) {
-                // The apps list search pill may be open, e.g. with "Automatically Open Search"
-                appsListViewModel.onSearchExpandedChanged(false)
-                appsListViewModel.openSearchOverlay()
-                doHapticFeedBack(haptics, hapticFeedbackEnabled)
-            }
+            .swipeUpFromBottom(
+                enabled = swipeUpToSearch,
+                canStartFromZone = { !searchOverlayOpen },
+                takesOverAnyDrag = { searchKeyboardDrag.takesOverAnyDrag },
+                onSwipeStart = {
+                    val opening = !searchOverlayOpen
+                    searchKeyboardDrag.begin()
+                    if (opening) {
+                        // The apps list search pill may be open, e.g. with "Automatically Open Search"
+                        appsListViewModel.onSearchExpandedChanged(false)
+                        appsListViewModel.openSearchOverlay()
+                        doHapticFeedBack(haptics, hapticFeedbackEnabled)
+                    }
+                },
+                onSwipe = { distanceUp -> searchKeyboardDrag.drag(distanceUp) },
+                onSwipeEnd = { velocityUp -> searchKeyboardDrag.release(velocityUp) }
+            )
     ) {
         HorizontalPager(
             state = viewModel.pagerState,
@@ -256,6 +272,7 @@ fun MainPagerScreen(
 
                 appsListPageIndex -> {
                     val searchText by appsListViewModel.searchText.collectAsState()
+                    val searchExpanded by appsListViewModel.searchExpanded.collectAsState()
                     val showSearchBox by appsListViewModel.showSearchBox.collectAsState(initial = DefaultSettings.SHOW_SEARCH_BOX)
                     val selectedTabIndex = remember { mutableIntStateOf(0) }
                     val apps by appsListViewModel.apps.collectAsState()
@@ -304,33 +321,34 @@ fun MainPagerScreen(
                 }
             }
         }
-    }
 
-    // Swipe up search
-    SearchOverlay(
-        visible = searchOverlayOpen,
-        searchText = searchOverlayText,
-        results = searchOverlayResults.apps,
-        alignment = appsListAlignment,
-        showWallpaper = showWallpaper,
-        onSearchTextChanged = { appsListViewModel.onSearchOverlayTextChanged(it) },
-        onSearchDone = { keyboardController ->
-            val bestMatch = searchOverlayResults.apps.firstOrNull()
-            if (searchOverlayText.isNotBlank() && bestMatch != null) {
-                keyboardController?.hide()
-                openAppAndClearSearch(bestMatch)
-            } else {
+        // Swipe up search
+        SearchOverlay(
+            visible = searchOverlayOpen,
+            searchText = searchOverlayText,
+            results = searchOverlayResults.apps,
+            alignment = appsListAlignment,
+            showWallpaper = showWallpaper,
+            keyboardDrag = searchKeyboardDrag,
+            onSearchTextChanged = { appsListViewModel.onSearchOverlayTextChanged(it) },
+            onSearchDone = { keyboardController ->
+                val bestMatch = searchOverlayResults.apps.firstOrNull()
+                if (searchOverlayText.isNotBlank() && bestMatch != null) {
+                    keyboardController?.hide()
+                    openAppAndClearSearch(bestMatch)
+                } else {
+                    doHapticFeedBack(haptics, hapticFeedbackEnabled)
+                }
+            },
+            onAppClick = { app -> openAppAndClearSearch(app) },
+            onDismiss = { appsListViewModel.closeSearchOverlay() },
+            onAppLongClick = { app ->
+                appsListViewModel.setBottomSheetVisible(true)
+                appsListViewModel.setBottomSheetApp(app)
                 doHapticFeedBack(haptics, hapticFeedbackEnabled)
             }
-        },
-        onAppClick = { app -> openAppAndClearSearch(app) },
-        onDismiss = { appsListViewModel.closeSearchOverlay() },
-        onAppLongClick = { app ->
-            appsListViewModel.setBottomSheetVisible(true)
-            appsListViewModel.setBottomSheetApp(app)
-            doHapticFeedBack(haptics, hapticFeedbackEnabled)
-        }
-    )
+        )
+    }
 
     // Bottom Sheet for apps from the apps list and the search overlay
     val showBottomSheet by appsListViewModel.showBottomSheet.collectAsState()
