@@ -28,14 +28,19 @@ class GlobalViewModel @Inject constructor(
     val showStatusBar = appearanceRepository.showStatusBar
     val showWallpaper = appearanceRepository.showWallpaper
 
-    private val _navigateHomeEvent = MutableSharedFlow<Unit>(
+    // Emits whether the trip home should be animated
+    private val _navigateHomeEvent = MutableSharedFlow<Boolean>(
         replay = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST, extraBufferCapacity = 1
     )
     val navigateHomeEvent = _navigateHomeEvent.asSharedFlow()
 
-    fun requestToGoHome() {
+    /**
+     * @param animated Whether to animate the scroll to the home page. Use false when the screen
+     * is off, where the animation can't run and would instead play once the screen turns on.
+     */
+    fun requestToGoHome(animated: Boolean = true) {
         viewModelScope.launch {
-            _navigateHomeEvent.emit(Unit)
+            _navigateHomeEvent.emit(animated)
         }
     }
 

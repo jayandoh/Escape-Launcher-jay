@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -180,12 +181,18 @@ class MainHomeScreenActivity : ComponentActivity() {
 
         // Responsible for taking you to the favourites page when you press the home button
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
-            // Only navigate home if we've finished onboarding
-            lifecycleScope.launch {
-                val isFirstTime = globalViewModel.firstTime.first()
-                if (!isFirstTime) {
-                    globalViewModel.requestToGoHome()
-                }
+            goHomeIfOnboarded(animated = true)
+        }
+    }
+
+    /**
+     * Navigates to the home page unless onboarding is still in progress
+     */
+    private fun goHomeIfOnboarded(animated: Boolean) {
+        lifecycleScope.launch {
+            val isFirstTime = globalViewModel.firstTime.first()
+            if (!isFirstTime) {
+                globalViewModel.requestToGoHome(animated)
             }
         }
     }
@@ -215,6 +222,15 @@ class MainHomeScreenActivity : ComponentActivity() {
             widgetHostManager.stopListening()
         } catch (e: Exception) {
             Log.e("Widgets", "Error stopping AppWidgetHost in onStop", e)
+        }
+
+        // Stopping while the screen is off means the launcher was showing when it turned off,
+        // since opening another app stops the launcher while the screen is still on. Reset to
+        // the home page now, without animating, so waking the phone lands there with no jump.
+        // ACTION_SCREEN_OFF can't make this distinction as the launcher is already stopped by
+        // the time it arrives.
+        if (!getSystemService(PowerManager::class.java).isInteractive) {
+            goHomeIfOnboarded(animated = false)
         }
     }
 
@@ -280,7 +296,7 @@ class MainHomeScreenActivity : ComponentActivity() {
 
         // Responsible for going home when navigateHomeEvent happens
         LaunchedEffect(globalViewModel.navigateHomeEvent) {
-            globalViewModel.navigateHomeEvent.collect {
+            globalViewModel.navigateHomeEvent.collect { animated ->
                 // Clear the back stack and set Home as the only entry
                 if (backStack.lastOrNull() !is AppNavKey.Home) {
                     backStack.removeAll { it !is AppNavKey.Home }
@@ -288,12 +304,20 @@ class MainHomeScreenActivity : ComponentActivity() {
                         backStack.add(AppNavKey.Home)
                     }
                 }
-                launch {
-                    mainPagerViewModel.animatedGoToMainPage()
-                }
-                launch {
-                    delay(300.milliseconds)
-                    mainPagerViewModel.appsListScrollState.scrollToItem(0)
+                if (animated) {
+                    launch {
+                        mainPagerViewModel.animatedGoToMainPage()
+                    }
+                    launch {
+                        delay(300.milliseconds)
+                        mainPagerViewModel.appsListScrollState.scrollToItem(0)
+                    }
+                } else {
+                    // Requests rather than suspending scrolls: the apps list isn't laid out
+                    // while it's off screen, so scrollToItem would never return and would
+                    // block every later request to go home
+                    mainPagerViewModel.requestGoToMainPage()
+                    mainPagerViewModel.appsListScrollState.requestScrollToItem(0)
                 }
             }
         }
