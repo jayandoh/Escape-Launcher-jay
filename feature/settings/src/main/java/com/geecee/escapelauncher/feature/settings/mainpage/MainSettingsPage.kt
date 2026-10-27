@@ -565,8 +565,8 @@ fun MainSettingsPage(
 }
 
 /**
- * Shown when swipe up to search is turned on: the search box, Quick search and Automatically Open Search
- * have just been turned off because it replaces them. They can be turned back on as usual.
+ * Shown when swipe up to search is turned on: the search box and Automatically Open Search have just been
+ * turned off because it replaces them. They can be turned back on as usual.
  */
 @Composable
 private fun SwipeUpToSearchNotice(onDismiss: () -> Unit) {
@@ -587,7 +587,6 @@ private fun SwipeUpToSearchNotice(onDismiss: () -> Unit) {
                 stringResource(
                     R.string.swipe_up_to_search_notice,
                     stringResource(R.string.search_box),
-                    stringResource(R.string.auto_open),
                     stringResource(R.string.apps_list_auto_search)
                 ),
                 style = textStyle.copy(fontSize = 16.sp, lineHeight = 22.sp)

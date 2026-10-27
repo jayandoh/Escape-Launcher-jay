@@ -83,7 +83,7 @@
     <string name="swipe_up_area_shorter">Hacer más baja</string>
     <string name="reset">Restablecer</string>
     <string name="swipe_up_to_search_notice_title">Otras opciones de búsqueda desactivadas</string>
-    <string name="swipe_up_to_search_notice">Deslizar hacia arriba para buscar sustituye a \"%1$s\", \"%2$s\" y \"%3$s\", así que se han desactivado. Puedes volver a activarlas aquí, pero no se recomienda.</string>
+    <string name="swipe_up_to_search_notice">Deslizar hacia arriba para buscar sustituye a \"%1$s\" y \"%2$s\", así que se han desactivado. Puedes volver a activarlas aquí, pero no se recomienda.</string>
     <string name="ok">Aceptar</string>
     <string name="sponsor">Apoyar</string>
     <string name="font_licences">Licencias de Fuentes</string>

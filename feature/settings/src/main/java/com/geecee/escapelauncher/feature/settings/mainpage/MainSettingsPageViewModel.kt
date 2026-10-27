@@ -263,13 +263,12 @@ class MainSettingsPageViewModel @Inject constructor(
         }
     }
 
-    /** Turning it on also turns off the search box and its options, since it replaces them */
+    /** Turning it on also turns off the search box and Automatically Open Search, since it replaces them */
     fun setSwipeUpToSearch(value: Boolean) {
         viewModelScope.launch {
             searchSettingsRepository.setSwipeUpToSearch(value)
             if (value) {
                 searchSettingsRepository.setShowSearchBox(false)
-                searchSettingsRepository.setAutomaticallyOpenAppsInSearch(false)
                 searchSettingsRepository.setSearchAutoOpen(false)
             }
         }

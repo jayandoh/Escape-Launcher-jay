@@ -94,7 +94,7 @@
     <string name="swipe_up_area_shorter">Facer máis baixa</string>
     <string name="reset">Restablecer</string>
     <string name="swipe_up_to_search_notice_title">Outras opcións de busca desactivadas</string>
-    <string name="swipe_up_to_search_notice">Desprazar cara arriba para buscar substitúe a \"%1$s\", \"%2$s\" e \"%3$s\", así que se desactivaron. Podes volver activalas aquí, pero non se recomenda.</string>
+    <string name="swipe_up_to_search_notice">Desprazar cara arriba para buscar substitúe a \"%1$s\" e \"%2$s\", así que se desactivaron. Podes volver activalas aquí, pero non se recomenda.</string>
     <string name="ok">Aceptar</string>
     <string name="sponsor">Patrocinio</string>
     <string name="font_licences">Licenzas das tipografías</string>
