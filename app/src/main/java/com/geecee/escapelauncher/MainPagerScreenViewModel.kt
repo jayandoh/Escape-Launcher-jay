@@ -101,6 +101,14 @@ class MainPagerScreenViewModel @Inject constructor(
         pagerState.scrollToPage(getMainPageIndex())
     }
 
+    /**
+     * Jumps to the main page on the pager's next layout. Unlike [goToMainPage] this doesn't
+     * suspend, so it's safe to call while the pager isn't being laid out, e.g. with the screen off
+     */
+    fun requestGoToMainPage() {
+        pagerState.requestScrollToPage(getMainPageIndex())
+    }
+
     suspend fun animatedGoToMainPage() {
         val targetPage = getMainPageIndex()
 

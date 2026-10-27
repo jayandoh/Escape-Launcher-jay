@@ -235,6 +235,7 @@ fun MainPagerScreen(
                                     onGoHomeRequest = {
                                         globalViewModel.requestToGoHome()
                                     },
+                                    scrollState = viewModel.appsListScrollState,
                                     appsListViewModel = appsListViewModel,
                                     screenTimeViewModel = screenTimeViewModel
                                 )
