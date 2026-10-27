@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -58,10 +57,7 @@ fun AnimatedPillSearchBar(
     onSearchTextChanged: (String) -> Unit,
     onSearchDone: (String, SoftwareKeyboardController?) -> Unit,
     modifier: Modifier = Modifier,
-    autoFocus: Boolean = false,
-    // False focuses the field without the keyboard popping up, for a caller that raises it itself
-    showKeyboardOnFocus: Boolean = true,
-    onFocused: () -> Unit = {}
+    autoFocus: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
 
@@ -100,10 +96,9 @@ fun AnimatedPillSearchBar(
     // Handle Auto-focus and Expansion changes
     LaunchedEffect(isExpanded, autoFocus) {
         if (isExpanded) {
-            if (showKeyboardOnFocus) delay(150.milliseconds) else withFrameNanos {}
+            delay(150.milliseconds)
             focusRequester.requestFocus()
-            if (showKeyboardOnFocus) keyboardController?.show()
-            onFocused()
+            keyboardController?.show()
         } else {
             keyboardController?.hide()
         }
@@ -159,7 +154,7 @@ fun AnimatedPillSearchBar(
                         .padding(start = 48.dp, end = 16.dp)
                         .focusRequester(focusRequester),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, showKeyboardOnFocus = showKeyboardOnFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
                         onSearchDone(textFieldValue.text.trim(), keyboardController)
                     }),

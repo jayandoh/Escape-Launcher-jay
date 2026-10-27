@@ -54,7 +54,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.geecee.escapelauncher.core.model.InstalledApp
 import com.geecee.escapelauncher.core.ui.R
-import com.geecee.escapelauncher.core.ui.composables.AnimatedPillSearchBar
 import com.geecee.escapelauncher.core.ui.composables.HomeScreenItem
 
 /**
@@ -270,16 +269,11 @@ fun SearchOverlay(
                     .padding(start = 30.dp, end = 30.dp, bottom = 30.dp),
                 contentAlignment = fieldAlignment
             ) {
-                AnimatedPillSearchBar(
+                SearchOverlayField(
                     searchText = searchText,
-                    isExpanded = true,
-                    autoFocus = true,
-                    // Where the keyboard can follow the finger, the swipe raises it itself
-                    showKeyboardOnFocus = !SearchKeyboardDrag.isSupported,
-                    onFocused = { keyboardDrag.onFieldFocused() },
-                    onExpandedChange = {},
                     onSearchTextChanged = onSearchTextChanged,
-                    onSearchDone = { _, keyboardController -> onSearchDone(keyboardController) }
+                    onSearchDone = onSearchDone,
+                    onFocused = { keyboardDrag.onFieldFocused() }
                 )
             }
         }
