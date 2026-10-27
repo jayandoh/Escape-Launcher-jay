@@ -178,8 +178,7 @@ fun SearchOverlay(
         // A tap on the empty space only closes the search if the finger touched down after it finished
         // opening, meaning the keyboard is fully up and still, so a stray touch while the thumb is still
         // opening it does nothing
-        val imeAnimationTarget = WindowInsets.imeAnimationTarget
-        val imeTarget = imeAnimationTarget.getBottom(LocalDensity.current)
+        val imeTarget = WindowInsets.imeAnimationTarget.getBottom(LocalDensity.current)
         val finishedOpening = !keyboardDrag.active && keyboardDrag.overlayState.isIdle &&
             imeBottom > 0 && imeBottom == imeTarget
         val currentFinishedOpening by rememberUpdatedState(finishedOpening)
@@ -198,12 +197,6 @@ fun SearchOverlay(
                         keyboardDrag.active && !keyboardDrag.failed ->
                             if (shownHeight > 0) (ime.getBottom(this).toFloat() / shownHeight).coerceIn(0f, 1f) else 0f
                         dragSession && shownHeight > 0 -> (ime.getBottom(this).toFloat() / shownHeight).coerceIn(0f, 1f)
-                        // The keyboard is coming up the usual way: fade in with it, rather than show the search
-                        // at the bottom of the screen and then jump up above the keyboard
-                        keyboardDrag.failed -> {
-                            val target = imeAnimationTarget.getBottom(this)
-                            if (target > 0) (ime.getBottom(this).toFloat() / target).coerceIn(0f, 1f) else 0f
-                        }
                         else -> 1f
                     }
                 }
