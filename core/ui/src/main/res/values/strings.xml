@@ -115,6 +115,9 @@
     <string name="swipe_up_area_taller">Make taller</string>
     <string name="swipe_up_area_shorter">Make shorter</string>
     <string name="reset">Reset</string>
+    <string name="swipe_up_to_search_notice_title">Other search options turned off</string>
+    <string name="swipe_up_to_search_notice">Swipe up to search replaces \"%1$s\", \"%2$s\" and \"%3$s\", so they have been turned off. You can turn them back on here, but it isn\'t recommended.</string>
+    <string name="ok">OK</string>
     <string name="sponsor">Sponsor</string>
     <string name="font_licences">Font Licences</string>
     <string name="show_weather">Show Weather</string>

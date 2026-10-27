@@ -2,7 +2,10 @@ package com.geecee.escapelauncher.feature.appslist
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,7 +37,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -58,8 +64,8 @@ import kotlin.math.roundToInt
 /**
  * Shown over the real home screen to adjust where swipe up to search starts.
  *
- * The area above Android's gesture strip is tinted and its top edge follows a vertical drag anywhere on
- * the screen. Done saves it ([onDone] gets the height in dp, or null for the default), Reset goes back to
+ * The area above Android's gesture strip is tinted and its top edge follows a vertical drag that starts on
+ * the tinted area or on the handle showing its size. Done saves it ([onDone] gets the height in dp, or null for the default), Reset goes back to
  * the default, and Back cancels ([onCancel]). Everything under it is paused while it's open.
  */
 @Composable
@@ -111,14 +117,27 @@ fun SwipeUpAreaEditor(
         val strip = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
         val lineWidth = with(density) { 2.dp.toPx() }
 
-        // Takes every touch, so the home screen underneath is paused, and moves the line on a vertical drag
+        // Moves the line with a vertical drag that started on it
+        suspend fun AwaitPointerEventScope.dragLine(down: PointerInputChange) {
+            val start = awaitVerticalTouchSlopOrCancellation(down.id) { change, overSlop ->
+                change.consume()
+                setHeight(heightPx - overSlop)
+            } ?: return
+            verticalDrag(start.id) { change ->
+                setHeight(heightPx - change.positionChange().y)
+                change.consume()
+            }
+        }
+
+        // Takes every touch, so the home screen underneath is paused. Only a drag that starts on the tinted
+        // area moves the line; above it, nothing happens.
         Canvas(
             Modifier
                 .fillMaxSize()
-                .pointerInput(screenHeight, gestureStrip) {
-                    detectVerticalDragGestures { change, dragAmount ->
-                        change.consume()
-                        setHeight(heightPx - dragAmount)
+                .pointerInput(screenHeight, gestureStrip, hapticFeedbackEnabled) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        if (down.position.y >= screenHeight - gestureStrip - heightPx) dragLine(down)
                     }
                 }
         ) {
@@ -144,6 +163,9 @@ fun SwipeUpAreaEditor(
                 .align(Alignment.TopCenter)
                 .offset { IntOffset(0, (areaTop - handleHeight / 2).roundToInt()) }
                 .onSizeChanged { handleHeight = it.height.toFloat() }
+                .pointerInput(screenHeight, gestureStrip, hapticFeedbackEnabled) {
+                    awaitEachGesture { dragLine(awaitFirstDown(requireUnconsumed = false)) }
+                }
                 .semantics {
                     contentDescription = label
                     stateDescription = "$percent%"

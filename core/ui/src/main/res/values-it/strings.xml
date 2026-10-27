@@ -106,6 +106,9 @@
     <string name="swipe_up_area_taller">Più alta</string>
     <string name="swipe_up_area_shorter">Più bassa</string>
     <string name="reset">Ripristina</string>
+    <string name="swipe_up_to_search_notice_title">Altre opzioni di ricerca disattivate</string>
+    <string name="swipe_up_to_search_notice">Scorri verso l\'alto per cercare sostituisce \"%1$s\", \"%2$s\" e \"%3$s\", quindi sono state disattivate. Puoi riattivarle qui, ma non è consigliato.</string>
+    <string name="ok">OK</string>
     <string name="sponsor">Sponsor</string>
     <string name="font_licences">Licenze Font</string>
     <string name="show_weather">Mostra Meteo</string>
