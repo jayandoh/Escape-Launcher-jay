@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -102,7 +103,9 @@ fun SearchOverlay(
         enter = if (SearchKeyboardDrag.isSupported) EnterTransition.None else fadeIn() + slideInVertically { it / 10 },
         // Quick, so it finishes together with the keyboard sliding away
         exit = fadeOut(tween(durationMillis = 150)),
-        modifier = modifier
+        // While it closes it sits behind the launcher pages, so taps and sideways swipes reach them straight
+        // away instead of the fading search. A swipe up still catches it, through the swipe detector above both.
+        modifier = modifier.zIndex(if (visible) 0f else -1f)
     ) {
         val fieldAlignment = when (alignment) {
             Alignment.End -> Alignment.BottomEnd

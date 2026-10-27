@@ -8,9 +8,10 @@ import android.os.CancellationSignal
 import android.view.View
 import android.view.animation.LinearInterpolator
 import androidx.annotation.ChecksSdkIntAtLeast
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateTo
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -30,6 +31,7 @@ import androidx.core.view.WindowInsetsCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Upward release speed, in px/s, past which a swipe counts as a flick */
@@ -277,14 +279,18 @@ class SearchKeyboardDrag(private val view: View, private val scope: CoroutineSco
         val shown = c.shownStateInsets.bottom.toFloat()
         val current = c.currentInsets.bottom.toFloat()
         val open = settlesOpen(current, hidden, shown, velocityUp)
+        val target = if (open) shown else hidden
         settleJob?.cancel()
         settleJob = scope.launch {
-            Animatable(current).animateTo(
-                targetValue = if (open) shown else hidden,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
-                initialVelocity = velocityUp
+            AnimationState(initialValue = current, initialVelocity = velocityUp).animateTo(
+                targetValue = target,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
             ) {
-                setBottom(c, value.coerceIn(hidden, shown))
+                val bottom = value.coerceIn(hidden, shown)
+                setBottom(c, bottom)
+                // Done once it's there: a flick can drive it into the end long before the spring winds down,
+                // and the search only closes after the settle
+                if (abs(bottom - target) < 1f) cancelAnimation()
             }
             // Only reached if no new swipe took over in the meantime
             if (controller === c) {
