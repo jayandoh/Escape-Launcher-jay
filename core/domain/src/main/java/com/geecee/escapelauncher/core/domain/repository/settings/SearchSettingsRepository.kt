@@ -11,4 +11,10 @@ interface SearchSettingsRepository {
     suspend fun setAutomaticallyOpenAppsInSearch(enabled: Boolean)
     val showHiddenAppsInSearch: Flow<Boolean>
     suspend fun setShowHiddenAppsInSearch(enabled: Boolean)
+    val swipeUpToSearch: Flow<Boolean>
+    suspend fun setSwipeUpToSearch(enabled: Boolean)
+    /** Height of the swipe up area above the gesture strip in dp, or null for the default */
+    val swipeUpAreaHeightDp: Flow<Float?>
+    /** Null goes back to the default */
+    suspend fun setSwipeUpAreaHeightDp(heightDp: Float?)
 }

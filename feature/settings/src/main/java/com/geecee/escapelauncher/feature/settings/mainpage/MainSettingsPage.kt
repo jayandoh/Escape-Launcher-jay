@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +35,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -66,6 +70,7 @@ fun MainSettingsPage(
     goBack: () -> Unit,
     showPolicyDialog: () -> Unit,
     onNavigate: (SettingsNavKey) -> Unit,
+    onEditSwipeUpArea: () -> Unit,
     mainSettingsPageViewModel: MainSettingsPageViewModel = hiltViewModel(),
     weatherViewModel: WeatherViewModel = hiltViewModel(LocalActivity.current as ComponentActivity)
 ) {
@@ -76,6 +81,7 @@ fun MainSettingsPage(
     val installedApps by mainSettingsPageViewModel.installedApps.collectAsState()
     val uiState by mainSettingsPageViewModel.uiState.collectAsState()
     var showWeatherAppPicker by remember { mutableStateOf(false) }
+    var showSwipeUpToSearchNotice by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -394,10 +400,33 @@ fun MainSettingsPage(
                 SettingsSwitch(
                     label = stringResource(id = R.string.apps_list_auto_search),
                     checked = uiState.searchAutoOpen,
-                    isBottomOfGroup = true,
+                    isBottomOfGroup = false,
                     onCheckedChange = {
                         mainSettingsPageViewModel.setSearchAutoOpen(it)
                     })
+            }
+
+            item(key = "swipe_up_to_search") {
+                SettingsSwitch(
+                    label = stringResource(id = R.string.swipe_up_to_search),
+                    checked = uiState.swipeUpToSearch,
+                    isBottomOfGroup = !uiState.swipeUpToSearch,
+                    onCheckedChange = {
+                        mainSettingsPageViewModel.setSwipeUpToSearch(it)
+                        if (it) showSwipeUpToSearchNotice = true
+                    })
+            }
+
+            // Only there while swipe up to search is on
+            if (uiState.swipeUpToSearch) {
+                item(key = "swipe_up_area") {
+                    SettingsNavigationItem(
+                        label = stringResource(id = R.string.swipe_up_area),
+                        diagonalArrow = false,
+                        isBottomOfGroup = true,
+                        onClick = onEditSwipeUpArea
+                    )
+                }
             }
 
             //Screen time
@@ -528,5 +557,40 @@ fun MainSettingsPage(
                 showWeatherAppPicker = false
             }, onDismiss = { showWeatherAppPicker = false })
         }
+
+        if (showSwipeUpToSearchNotice) {
+            SwipeUpToSearchNotice(onDismiss = { showSwipeUpToSearchNotice = false })
+        }
     }
+}
+
+/**
+ * Shown when swipe up to search is turned on: the search box and Automatically Open Search have just been
+ * turned off because it replaces them. They can be turned back on as usual.
+ */
+@Composable
+private fun SwipeUpToSearchNotice(onDismiss: () -> Unit) {
+    // The theme's title and body styles are sized for the launcher's big text, too large for a dialog
+    val textStyle = MaterialTheme.typography.bodySmall
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.ok), style = textStyle.copy(fontSize = 16.sp))
+            }
+        },
+        title = {
+            Text(stringResource(R.string.swipe_up_to_search_notice_title), style = textStyle.copy(fontSize = 22.sp, lineHeight = 28.sp))
+        },
+        text = {
+            Text(
+                stringResource(
+                    R.string.swipe_up_to_search_notice,
+                    stringResource(R.string.search_box),
+                    stringResource(R.string.apps_list_auto_search)
+                ),
+                style = textStyle.copy(fontSize = 16.sp, lineHeight = 22.sp)
+            )
+        }
+    )
 }

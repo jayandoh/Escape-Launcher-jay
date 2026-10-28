@@ -67,6 +67,10 @@ sealed interface AppNavKey : NavKey {
     @Serializable
     data object Settings : AppNavKey
 
+    /** Adjusting the swipe up area, over the home page, on top of settings so it returns there */
+    @Serializable
+    data object EditSwipeUpArea : AppNavKey
+
     @Serializable
     data object Onboarding : AppNavKey
 }
@@ -377,6 +381,13 @@ class MainHomeScreenActivity : ComponentActivity() {
                                 backStack.removeLastOrNull()
                             },
                             activity = this@MainHomeScreenActivity,
+                            editSwipeUpArea = { backStack.add(AppNavKey.EditSwipeUpArea) }
+                        )
+                    }
+                    entry<AppNavKey.EditSwipeUpArea> {
+                        SwipeUpAreaEditScreen(
+                            mainPagerViewModel = mainPagerViewModel,
+                            onClose = { backStack.removeLastOrNull() }
                         )
                     }
                     entry<AppNavKey.Onboarding> {

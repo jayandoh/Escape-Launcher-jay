@@ -51,10 +51,11 @@ object DefaultSettings {
     const val NIGHT_MODE_LIGHT = 2
     const val NIGHT_MODE = NIGHT_MODE_SYNC
 
-    // Search
-    const val SHOW_SEARCH_BOX = true
+    // Search. Swipe up to search is on, so the search box starts off: it replaces it
+    const val SHOW_SEARCH_BOX = false
     const val SEARCH_AUTO_OPEN = false
     const val AUTOMATICALLY_OPEN_APPS_IN_SEARCH = false
+    const val SWIPE_UP_TO_SEARCH = true
 
     // Misc
     const val DOUBLE_TAP_TO_LOCK = true

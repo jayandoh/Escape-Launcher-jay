@@ -10,7 +10,9 @@ import com.geecee.escapelauncher.core.domain.apps.GetAppShortcutsUseCase
 import com.geecee.escapelauncher.core.domain.apps.OpenAppDetailsUseCase
 import com.geecee.escapelauncher.core.domain.apps.StartShortcutUseCase
 import com.geecee.escapelauncher.core.domain.apps.UninstallAppUseCase
+import com.geecee.escapelauncher.core.domain.search.AppSearchResult
 import com.geecee.escapelauncher.core.domain.search.SearchAppsUseCase
+import com.geecee.escapelauncher.core.domain.search.quickSearchMatch
 import com.geecee.escapelauncher.core.domain.repository.db.ModifiedAppsRepository
 import com.geecee.escapelauncher.core.domain.repository.settings.*
 import com.geecee.escapelauncher.core.model.AppAction
@@ -26,7 +28,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class AppsListViewModel @Inject constructor(
     appearanceRepository: AppearanceRepository,
-    searchSettingsRepository: SearchSettingsRepository,
+    private val searchSettingsRepository: SearchSettingsRepository,
     launcherBehaviorRepository: LauncherBehaviorRepository,
     screenTimeSettingsRepository: ScreenTimeSettingsRepository,
     private val modifiedAppsRepository: ModifiedAppsRepository,
@@ -54,6 +56,15 @@ class AppsListViewModel @Inject constructor(
     val searchAutoOpen = searchSettingsRepository.searchAutoOpen
     val automaticallyOpenAppsInSearch = searchSettingsRepository.automaticallyOpenAppsInSearch
     val hiddenAppsInSearch = searchSettingsRepository.showHiddenAppsInSearch
+    val swipeUpToSearch = searchSettingsRepository.swipeUpToSearch
+    // Kept current so it's already known when the home screen is drawn again, e.g. coming back from settings
+    val swipeUpAreaHeightDp: StateFlow<Float?> = searchSettingsRepository.swipeUpAreaHeightDp
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    /** Every saved value as it loads, for screens that must wait for the real one */
+    val swipeUpAreaHeightDpUpdates: Flow<Float?> = searchSettingsRepository.swipeUpAreaHeightDp
+    fun setSwipeUpAreaHeightDp(heightDp: Float?) {
+        viewModelScope.launch { searchSettingsRepository.setSwipeUpAreaHeightDp(heightDp) }
+    }
     val hapticFeedBackEnabled = launcherBehaviorRepository.hapticFeedBackEnabled
     val showWallpaper = appearanceRepository.showWallpaper
 
@@ -75,13 +86,56 @@ class AppsListViewModel @Inject constructor(
     }
 
     // Apps
-    val apps: StateFlow<List<InstalledApp>> = searchAppsUseCase(_searchText, hiddenAppsInSearch)
+    private val searchResults: StateFlow<AppSearchResult> = searchAppsUseCase.withQuery(_searchText, hiddenAppsInSearch)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AppSearchResult("", emptyList())
+        )
+    val apps: StateFlow<List<InstalledApp>> = searchResults.map { it.apps }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
-    
+
+    // Swipe up search overlay, with its own query so the apps list underneath stays as it was
+    private val _searchOverlayOpen = MutableStateFlow(false)
+    val searchOverlayOpen: StateFlow<Boolean> = _searchOverlayOpen.asStateFlow()
+    private val _searchOverlayText = MutableStateFlow("")
+    val searchOverlayText: StateFlow<String> = _searchOverlayText.asStateFlow()
+    val searchOverlayResults: StateFlow<AppSearchResult> = searchAppsUseCase.withQuery(_searchOverlayText, hiddenAppsInSearch)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AppSearchResult("", emptyList())
+        )
+    fun openSearchOverlay() {
+        _searchOverlayText.value = ""
+        _searchOverlayOpen.value = true
+    }
+    fun closeSearchOverlay() {
+        _searchOverlayOpen.value = false
+        _searchOverlayText.value = ""
+    }
+    fun onSearchOverlayTextChanged(query: String) {
+        if (_searchOverlayOpen.value) {
+            _searchOverlayText.value = query
+        }
+    }
+
+    // Quick search: the app to open automatically once a search narrows down to it.
+    // Each result carries its own query, so a list from an earlier keystroke can never trigger it.
+    private fun quickSearchMatches(results: Flow<AppSearchResult>): Flow<InstalledApp> =
+        combine(results, automaticallyOpenAppsInSearch) { result, enabled ->
+            if (enabled) result.quickSearchMatch() else null
+        }.distinctUntilChanged().filterNotNull()
+    val quickSearchMatches: Flow<InstalledApp> = merge(
+        quickSearchMatches(searchResults),
+        quickSearchMatches(searchOverlayResults)
+    )
+
+
     // Bottom sheet
     private val _showBottomSheet = MutableStateFlow(false)
     val showBottomSheet: StateFlow<Boolean> = _showBottomSheet.asStateFlow()

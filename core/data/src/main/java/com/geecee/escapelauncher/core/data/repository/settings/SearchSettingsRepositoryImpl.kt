@@ -29,4 +29,15 @@ class SearchSettingsRepositoryImpl @Inject constructor(
     override suspend fun setShowHiddenAppsInSearch(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.SHOW_HIDDEN_APPS_IN_SEARCH] = enabled }
     }
+    override val swipeUpToSearch: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.SWIPE_UP_TO_SEARCH] ?: DefaultSettings.SWIPE_UP_TO_SEARCH }
+    override suspend fun setSwipeUpToSearch(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SWIPE_UP_TO_SEARCH] = enabled }
+    }
+    override val swipeUpAreaHeightDp: Flow<Float?> = dataStore.data.map { it[PreferencesKeys.SWIPE_UP_AREA_HEIGHT_DP] }
+    override suspend fun setSwipeUpAreaHeightDp(heightDp: Float?) {
+        dataStore.edit {
+            if (heightDp == null) it.remove(PreferencesKeys.SWIPE_UP_AREA_HEIGHT_DP)
+            else it[PreferencesKeys.SWIPE_UP_AREA_HEIGHT_DP] = heightDp
+        }
+    }
 }

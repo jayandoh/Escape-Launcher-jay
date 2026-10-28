@@ -5,6 +5,7 @@ import com.geecee.escapelauncher.core.domain.repository.db.ModifiedAppsRepositor
 import com.geecee.escapelauncher.core.model.InstalledApp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import jakarta.inject.Inject
 
 /***
@@ -14,7 +15,13 @@ class SearchAppsUseCase @Inject constructor(
     private val appsRepository: AppsRepository,
     private val modifiedAppsRepository: ModifiedAppsRepository
 ) {
-    operator fun invoke(queryFlow: Flow<String>, showHiddenFlow: Flow<Boolean>): Flow<List<InstalledApp>> {
+    operator fun invoke(queryFlow: Flow<String>, showHiddenFlow: Flow<Boolean>): Flow<List<InstalledApp>> =
+        withQuery(queryFlow, showHiddenFlow).map { it.apps }
+
+    /**
+     * Same as [invoke], but each result carries the query it was computed for
+     */
+    fun withQuery(queryFlow: Flow<String>, showHiddenFlow: Flow<Boolean>): Flow<AppSearchResult> {
         return combine(
             appsRepository.mainUserApps,
             modifiedAppsRepository.getHiddenPackageIdsFlow(),
@@ -34,11 +41,12 @@ class SearchAppsUseCase @Inject constructor(
                 }
             }
 
-            if (query.isNotBlank()) {
+            val sorted = if (query.isNotBlank()) {
                 sortAppsByRelevance(filtered, query)
             } else {
                 filtered
             }
+            AppSearchResult(rawQuery, sorted)
         }
     }
 }

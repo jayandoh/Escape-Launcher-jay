@@ -37,6 +37,7 @@ data class MainSettingsUiState(
     val showSearchBox: Boolean = DefaultSettings.SHOW_SEARCH_BOX,
     val searchAutoOpen: Boolean = DefaultSettings.SEARCH_AUTO_OPEN,
     val automaticallyOpenAppsInSearch: Boolean = DefaultSettings.AUTOMATICALLY_OPEN_APPS_IN_SEARCH,
+    val swipeUpToSearch: Boolean = DefaultSettings.SWIPE_UP_TO_SEARCH,
     val hideScreenTimePage: Boolean = DefaultSettings.HIDE_SCREEN_TIME_PAGE,
     val allowAnalytics: Boolean = DefaultSettings.ALLOW_ANALYTICS,
     val isDefaultLauncher: Boolean = false,
@@ -82,7 +83,8 @@ class MainSettingsPageViewModel @Inject constructor(
         screenTimeSettingsRepository.hideScreenTimePage,
         launcherBehaviorRepository.allowAnalyitics,
         _isDefaultLauncher,
-        systemActionsRepository.isAccessibilityServiceEnabled
+        systemActionsRepository.isAccessibilityServiceEnabled,
+        searchSettingsRepository.swipeUpToSearch
     ) { args: Array<Any?> ->
         MainSettingsUiState(
             hapticFeedBackEnabled = args[0] as Boolean,
@@ -117,7 +119,8 @@ class MainSettingsPageViewModel @Inject constructor(
             hideScreenTimePage = args[17] as Boolean,
             allowAnalytics = args[18] as Boolean,
             isDefaultLauncher = args[19] as Boolean,
-            isAccessibilityServiceEnabled = args[20] as Boolean
+            isAccessibilityServiceEnabled = args[20] as Boolean,
+            swipeUpToSearch = args[21] as Boolean
         )
     }.stateIn(
         scope = viewModelScope,
@@ -257,6 +260,17 @@ class MainSettingsPageViewModel @Inject constructor(
     fun setAutomaticallyOpenAppsInSearch(value: Boolean) {
         viewModelScope.launch {
             searchSettingsRepository.setAutomaticallyOpenAppsInSearch(value)
+        }
+    }
+
+    /** Turning it on also turns off the search box and Automatically Open Search, since it replaces them */
+    fun setSwipeUpToSearch(value: Boolean) {
+        viewModelScope.launch {
+            searchSettingsRepository.setSwipeUpToSearch(value)
+            if (value) {
+                searchSettingsRepository.setShowSearchBox(false)
+                searchSettingsRepository.setSearchAutoOpen(false)
+            }
         }
     }
 

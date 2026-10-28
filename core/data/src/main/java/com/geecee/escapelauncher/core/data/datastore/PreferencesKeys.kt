@@ -48,6 +48,8 @@ object PreferencesKeys {
     val SHOW_SEARCH_BOX = booleanPreferencesKey(name = "show_search_box")
     val SEARCH_AUTO_OPEN = booleanPreferencesKey(name = "search_auto_open")
     val AUTOMATICALLY_OPEN_APPS_IN_SEARCH = booleanPreferencesKey(name = "automatically_open_apps_in_search")
+    val SWIPE_UP_TO_SEARCH = booleanPreferencesKey(name = "swipe_up_to_search")
+    val SWIPE_UP_AREA_HEIGHT_DP = floatPreferencesKey(name = "swipe_up_area_height_dp")
 
     //Misc
     val DOUBLE_TAP_TO_LOCK = booleanPreferencesKey(name = "double_tap_to_lock")

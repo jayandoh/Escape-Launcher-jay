@@ -74,6 +74,7 @@ class MainPagerScreenViewModel @Inject constructor(
         _isDefaultLauncher.value = getIsDefaultLauncherUseCase()
     }
 
+
     fun lockScreen() {
         lockScreenUseCase()
     }
