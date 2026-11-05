@@ -16,13 +16,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -41,14 +46,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -165,21 +177,31 @@ fun HomeScreen(
         }
     }
 
+    // Content stays clear of the status and navigation bars, and also keeps this far from the screen's top and
+    // bottom edges while there's room. That margin isn't scrollable content, so it shrinks before the page scrolls.
+    val systemBars = WindowInsets.systemBars.asPaddingValues()
+    val statusBarHeight = systemBars.calculateTopPadding()
+    val navigationBarHeight = systemBars.calculateBottomPadding()
+    val edgeMargin = 90.dp
+
     Box(modifier.fillMaxSize()) {
         LazyColumn(
             state = scrollState,
-            verticalArrangement = homeVAlignment,
+            contentPadding = PaddingValues(top = statusBarHeight, bottom = navigationBarHeight),
+            verticalArrangement = remember(homeVAlignment, statusBarHeight, navigationBarHeight) {
+                ShrinkingMarginsArrangement(
+                    arrangement = homeVAlignment,
+                    topMargin = edgeMargin - statusBarHeight,
+                    bottomMargin = edgeMargin - navigationBarHeight
+                )
+            },
             horizontalAlignment = homeAlignment,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(30.dp, 0.dp)
                 .nestedScroll(nestedScrollConnection)
+                .fadeUnderSystemBarsWhileScrollable(scrollState, statusBarHeight, navigationBarHeight)
         ) {
-            //Top padding
-            item {
-                Spacer(Modifier.height(90.dp))
-            }
-
             //Clock
             item {
                 if (showClock) {
@@ -357,10 +379,6 @@ fun HomeScreen(
                     }
                 }
             }
-
-            item {
-                Spacer(Modifier.height(90.dp))
-            }
         }
 
         // Bottom Sheet
@@ -376,6 +394,66 @@ fun HomeScreen(
     }
 }
 
+
+/**
+ * Places content like [arrangement], but first leaves [topMargin] and [bottomMargin] of empty space when there is
+ * room for them. When there isn't, both margins shrink in proportion, so they never make the list scroll.
+ */
+internal class ShrinkingMarginsArrangement(
+    private val arrangement: Arrangement.Vertical,
+    private val topMargin: Dp,
+    private val bottomMargin: Dp
+) : Arrangement.Vertical {
+    override fun Density.arrange(totalSize: Int, sizes: IntArray, outPositions: IntArray) {
+        val wantedTop = topMargin.roundToPx().coerceAtLeast(0)
+        val wantedBottom = bottomMargin.roundToPx().coerceAtLeast(0)
+        val room = (totalSize - sizes.sum()).coerceAtLeast(0)
+        val scale = if (wantedTop + wantedBottom > room) room.toFloat() / (wantedTop + wantedBottom) else 1f
+        val top = (wantedTop * scale).toInt()
+        val bottom = (wantedBottom * scale).toInt()
+
+        with(arrangement) { arrange(totalSize - top - bottom, sizes, outPositions) }
+        for (i in outPositions.indices) outPositions[i] += top
+    }
+}
+
+/**
+ * Fades the list out under the status bar and navigation bar while it can scroll further that way, so
+ * scrolled content doesn't run into the status bar icons
+ */
+private fun Modifier.fadeUnderSystemBarsWhileScrollable(
+    state: LazyListState,
+    statusBarHeight: Dp,
+    navigationBarHeight: Dp
+) = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+
+        val fadePx = 40.dp.toPx()
+        if (state.canScrollBackward) {
+            val barPx = statusBarHeight.toPx()
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.Transparent, Color.Black),
+                    startY = barPx,
+                    endY = barPx + fadePx
+                ),
+                blendMode = BlendMode.DstIn
+            )
+        }
+        if (state.canScrollForward) {
+            val barPx = navigationBarHeight.toPx()
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.Black, Color.Transparent),
+                    startY = size.height - barPx - fadePx,
+                    endY = size.height - barPx
+                ),
+                blendMode = BlendMode.DstIn
+            )
+        }
+    }
 
 @Composable
 fun HomeWeatherImpl(
