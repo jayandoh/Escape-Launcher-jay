@@ -43,6 +43,5 @@ class ClockViewModel @Inject constructor(
 
     override fun onCleared() {
         stopTicker()
-        super.onCleared()
     }
 }
